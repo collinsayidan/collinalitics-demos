@@ -1,0 +1,13 @@
+rule_id,quality_dimension,rule_name,severity,disposition,rule_description,expected_threshold_pct
+DQ01,Completeness,Traffic measure not null,Error,Quarantine,Vehicle_Count or Average_Speed_kmh is null,0.50
+DQ02,Completeness,Environmental measure not null,Warning,Impute,One or more weather or air quality measures is null,1.00
+DQ03,Validity,Speed within physical bounds,Error,Quarantine,Average speed exceeds posted limit by more than the tolerance factor or is zero or negative,0.75
+DQ04,Validity,Counts non negative,Error,Quarantine,Any vehicle count field is negative,0.25
+DQ05,Consistency,Class counts reconcile to total,Error,Quarantine,Vehicle_Count does not equal the sum of the five class counts,0.25
+DQ06,Accuracy,Dead zero sensor,Error,Quarantine,Zero flow recorded during the 06:00 to 20:00 active window,1.00
+DQ07,Accuracy,Implausible flow spike,Warning,Flag,Flow exceeds four times the site and hour median,0.50
+DQ08,Uniqueness,Duplicate site hour reading,Error,Deduplicate,More than one record exists for the same site date and time,2.00
+DQ09,Uniqueness,Record identifier unique,Error,Fail pipeline,Record_ID is duplicated,0.00
+DQ10,Timeliness,Observation within analysis window,Error,Fail pipeline,Observation date falls outside the declared reporting period,0.00
+DQ11,Integrity,Site attributes stable,Error,Fail pipeline,A sensor site reports more than one road type or speed limit,0.00
+DQ12,Integrity,Collision implies accident flag,Error,Fail pipeline,Incident type is Collision but Accident_Flag is not 1,0.00

@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: its_raw
+    description: >
+      Raw landing zone for the Scotland Intelligent Transport System detector
+      feed. One row per roadside detector site per hour. Delivered as a flat
+      CSV extract; read in place by DuckDB so no physical copy is made.
+    meta:
+      external_location: "read_csv_auto('../data/{name}.csv', header=true, sample_size=-1)"
+    tables:
+      - name: scotland_its_dataset
+        description: "Raw ITS detector observations, 2023-2025."
+        columns:
+          - name: Record_ID
+            description: "Source system surrogate key."
+            tests: [unique, not_null]

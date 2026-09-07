@@ -1,0 +1,207 @@
+// =============================================================================
+//  DASHBOARD 3  -  SAFETY AND INCIDENT INTELLIGENCE
+//  Serving tables : rpt_d3_safety_monthly     (11,779 rows, month x corridor x
+//                                              weather band x time band)
+//                   rpt_d3_risk_band_capture  (36 rows, risk band x corridor)
+//  Display folder : D3 Safety
+// =============================================================================
+//  Collision rate is an EXPOSURE-ADJUSTED measure. Both numerator and
+//  denominator are additive in the serving table, so the rate is correct at
+//  every filter level without a SUMX over the fact.
+// =============================================================================
+
+
+// -----------------------------------------------------------------------------
+// Volume and exposure
+// -----------------------------------------------------------------------------
+
+D3 Observations =
+SUM ( rpt_d3_safety_monthly[observation_count] )
+// format: #,##0
+
+D3 Vehicle Km =
+SUM ( rpt_d3_safety_monthly[vehicle_km] )
+// format: #,##0,, "m"
+
+
+// -----------------------------------------------------------------------------
+// Incidents
+// -----------------------------------------------------------------------------
+
+D3 Collisions =
+SUM ( rpt_d3_safety_monthly[collisions] )
+// format: #,##0
+
+D3 Incidents =
+SUM ( rpt_d3_safety_monthly[incidents] )
+// format: #,##0
+
+D3 Breakdowns =
+SUM ( rpt_d3_safety_monthly[breakdowns] )
+// format: #,##0
+
+D3 Collision Rate % =
+DIVIDE ( [D3 Collisions], [D3 Observations] )
+// format: 0.000%
+
+D3 Collisions Per 100m Vehicle Km =
+DIVIDE ( [D3 Collisions] * 100000000, [D3 Vehicle Km] )
+// format: 0.00
+// The internationally comparable rate. Use this, not the raw count, whenever
+// comparing corridors - the A82 and the M8 are not comparable on counts.
+
+D3 Lane Closure Hours =
+SUM ( rpt_d3_safety_monthly[lane_closure_hours] )
+// format: #,##0
+
+
+// -----------------------------------------------------------------------------
+// Weather conditioning  (visual 3.5 and the decomposition tree)
+// -----------------------------------------------------------------------------
+
+D3 Collision Rate Benign =
+CALCULATE ( [D3 Collision Rate %],
+            rpt_d3_safety_monthly[weather_severity_band] = "Benign" )
+// format: 0.000%
+
+D3 Collision Rate Adverse =
+CALCULATE ( [D3 Collision Rate %],
+            rpt_d3_safety_monthly[weather_severity_band] IN { "Adverse", "Severe" } )
+// format: 0.000%
+
+D3 Weather Collision Uplift =
+DIVIDE ( [D3 Collision Rate Adverse], [D3 Collision Rate Benign] ) - 1
+// format: +0.0%;-0.0%
+// Expected around +42.2%. Weather amplifies risk rather than causing it, so the
+// operational response should be conditional on weather AND peak coincidence.
+
+D3 Winter Collision Rate =
+CALCULATE ( [D3 Collision Rate %],
+            rpt_d3_safety_monthly[meteorological_season] = "Winter" )
+// format: 0.000%
+
+D3 Peak Collision Share % =
+DIVIDE (
+    CALCULATE ( [D3 Collisions], rpt_d3_safety_monthly[is_peak] = 1 ),
+    [D3 Collisions]
+)
+// format: 0.0%
+
+
+// -----------------------------------------------------------------------------
+// Economics of safety
+// -----------------------------------------------------------------------------
+
+D3 Annual Collision Cost =
+SUM ( rpt_d3_safety_monthly[annualised_collision_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+D3 Cost Per Collision =
+DIVIDE ( SUM ( rpt_d3_safety_monthly[collision_cost_gbp] ), [D3 Collisions] )
+// format: \£#,##0
+// Sense check: must equal the COLLISION_AVERAGE appraisal parameter, \£82,000.
+// If it does not, the seed and the fact have drifted apart.
+
+
+// -----------------------------------------------------------------------------
+// Model capture  (visual 3.12  -  the gain chart)
+// -----------------------------------------------------------------------------
+
+D3 Scored Hours =
+SUM ( rpt_d3_risk_band_capture[scored_hours] )
+// format: #,##0
+
+D3 Band Collisions =
+SUM ( rpt_d3_risk_band_capture[collisions] )
+// format: #,##0
+
+D3 Share Of Hours % =
+DIVIDE ( [D3 Scored Hours],
+         CALCULATE ( [D3 Scored Hours], ALLSELECTED ( rpt_d3_risk_band_capture ) ) )
+// format: 0.0%
+
+D3 Capture % =
+DIVIDE ( [D3 Band Collisions],
+         CALCULATE ( [D3 Band Collisions], ALLSELECTED ( rpt_d3_risk_band_capture ) ) )
+// format: 0.0%
+
+D3 Priority Capture % =
+CALCULATE ( [D3 Capture %],
+            ALLSELECTED ( rpt_d3_risk_band_capture ),
+            rpt_d3_risk_band_capture[collision_risk_band] = "Priority" )
+// format: 0.0%
+// THE headline for this model: 63.7% of collisions in the top 5% of hours.
+// Report this, never accuracy - accuracy reads 99.6% and means nothing at a
+// 0.36% positive rate.
+
+D3 Model Lift =
+DIVIDE ( [D3 Capture %], [D3 Share Of Hours %] )
+// format: 0.0"x"
+// Expected 12.8x in the Priority band.
+
+D3 Cumulative Capture % =
+VAR CurrentBand = MAX ( rpt_d3_risk_band_capture[band_order] )
+RETURN
+CALCULATE (
+    [D3 Capture %],
+    ALLSELECTED ( rpt_d3_risk_band_capture ),
+    rpt_d3_risk_band_capture[band_order] <= CurrentBand
+)
+// format: 0.0%
+// Plot as the line on the gain chart against [D3 Cumulative Hours %].
+
+D3 Cumulative Hours % =
+VAR CurrentBand = MAX ( rpt_d3_risk_band_capture[band_order] )
+RETURN
+CALCULATE (
+    [D3 Share Of Hours %],
+    ALLSELECTED ( rpt_d3_risk_band_capture ),
+    rpt_d3_risk_band_capture[band_order] <= CurrentBand
+)
+// format: 0.0%
+
+D3 Patrol Efficiency Statement =
+"Targeting the top " & FORMAT ( [D3 Share Of Hours %], "0.0%" ) &
+" of site-hours covers " & FORMAT ( [D3 Capture %], "0.0%" ) &
+" of collisions - a " & FORMAT ( [D3 Model Lift], "0.0" ) & "x concentration."
+
+
+// -----------------------------------------------------------------------------
+// Model transparency  (visual 3.13  -  publish the validation, not just the answer)
+// -----------------------------------------------------------------------------
+
+D3 PR AUC =
+CALCULATE ( MAX ( dim_model_metric[metric_value] ),
+    dim_model_metric[model_name] = "Collision Risk",
+    dim_model_metric[metric_name] = "PR AUC",
+    dim_model_metric[data_split]  = "Test 2025" )
+// format: 0.000
+
+D3 PR AUC Baseline =
+CALCULATE ( MAX ( dim_model_metric[metric_value] ),
+    dim_model_metric[model_name] = "Collision Risk",
+    dim_model_metric[metric_name] = "PR AUC",
+    dim_model_metric[data_split]  = "Baseline" )
+// format: 0.0000
+
+D3 Model Improvement =
+DIVIDE ( [D3 PR AUC], [D3 PR AUC Baseline] )
+// format: 0"x baseline"
+
+D3 Model Caveat =
+"Validated on a temporal hold-out (train 2023-24, test 2025). Source data is " &
+"synthetic and its collision process is a function of the model's own features, " &
+"so this performance is an upper bound. Expect lower PR-AUC on live STATS19 data."
+
+
+// =============================================================================
+//  SHARED LIBRARY MEASURES ALSO USED ON THIS PAGE
+//    [Collisions]  [Collisions Per 100m Vehicle Km]  [Mean Collision Risk]
+//    [Priority Risk Hours]  [Collisions Rolling 12 Month]  [Selected Period Label]
+//
+//  RECONCILIATION
+//    [D3 Collisions]        = [Collisions]              = 348
+//    [D3 Observations]      = [Observations]            = 96,652
+//    [D3 Priority Capture %] = [Priority Hour Capture %] = 63.7%
+//    [D3 Cost Per Collision] = ref_appraisal_parameters COLLISION_AVERAGE = \£82,000
+// =============================================================================

@@ -1,0 +1,587 @@
+// =============================================================================
+//  TRANSPORT SCOTLAND ITS ANALYTICS  --  DAX MEASURE LIBRARY  v1.0
+//  Target model : star schema exported from the dbt marts layer
+//  Home table   : create an empty table named  _Measures  and place all here
+//  Convention   : [Measure Name] in Title Case; display folders shown in
+//                 comments; every measure has an explicit format string.
+// =============================================================================
+
+
+// =============================================================================
+// 00  BASE  --  folder: 00 Base
+// =============================================================================
+
+Observations =
+COUNTROWS ( fct_traffic_observation )
+// format: #,##0
+
+Sites Monitored =
+DISTINCTCOUNT ( fct_traffic_observation[site_key] )
+// format: #,##0
+
+Days In Period =
+DISTINCTCOUNT ( fct_traffic_observation[date_key] )
+// format: #,##0
+
+Sampling Rate % =
+VAR PossibleSiteHours = [Sites Monitored] * [Days In Period] * 24
+RETURN DIVIDE ( [Observations], PossibleSiteHours )
+// format: 0.00%
+// Guards against reading a sampled total as a network census.
+
+
+// =============================================================================
+// 01  VOLUME  --  folder: 01 Volume
+// =============================================================================
+
+Total Vehicles =
+SUM ( fct_traffic_observation[vehicle_count] )
+// format: #,##0
+
+Average Hourly Flow =
+AVERAGE ( fct_traffic_observation[vehicle_count] )
+// format: #,##0
+
+Total PCU =
+SUM ( fct_traffic_observation[pcu_count] )
+// format: #,##0
+// Passenger car units: HGV x2.5, bus x2.0, motorcycle x0.4.
+
+Total HGV =
+SUM ( fct_traffic_observation[hgv_count] )
+// format: #,##0
+
+HGV Share % =
+DIVIDE ( [Total HGV], [Total Vehicles] )
+// format: 0.0%
+
+Freight Share % =
+DIVIDE ( SUM ( fct_traffic_observation[freight_vehicle_count] ), [Total Vehicles] )
+// format: 0.0%
+
+Peak Hour Flow =
+CALCULATE ( [Average Hourly Flow], dim_time[is_peak] = 1 )
+// format: #,##0
+
+Off Peak Flow =
+CALCULATE ( [Average Hourly Flow], dim_time[is_peak] = 0 )
+// format: #,##0
+
+Peak To Trough Ratio =
+DIVIDE ( [Peak Hour Flow], [Off Peak Flow] )
+// format: 0.0"x"
+
+Weekend Flow Index =
+VAR Weekday = CALCULATE ( [Average Hourly Flow], dim_date[day_type] = "Weekday" )
+VAR Weekend = CALCULATE ( [Average Hourly Flow], dim_date[day_type] = "Weekend" )
+RETURN DIVIDE ( Weekend, Weekday )
+// format: 0.0%
+// Below 100% = weekend suppression; the gap is almost entirely commuter travel.
+
+
+// =============================================================================
+// 02  PERFORMANCE  --  folder: 02 Performance
+// =============================================================================
+
+Journey Time Index =
+AVERAGE ( fct_traffic_observation[journey_time_index] )
+// format: 0.000
+// THE headline network KPI. 1.000 = free flow.
+
+JTI P95 =
+PERCENTILEX.INC ( fct_traffic_observation, fct_traffic_observation[journey_time_index], 0.95 )
+// format: 0.000
+
+Average Speed =
+AVERAGE ( fct_traffic_observation[average_speed_kmh] )
+// format: #,##0.0 "km/h"
+
+Harmonic Mean Speed =
+VAR N = COUNTROWS ( fct_traffic_observation )
+VAR SumRecip =
+    SUMX ( fct_traffic_observation, DIVIDE ( 1, fct_traffic_observation[average_speed_kmh] ) )
+RETURN DIVIDE ( N, SumRecip )
+// format: #,##0.0 "km/h"
+// Space-mean speed must be averaged harmonically. Using the arithmetic mean
+// overstates network speed and is the most common error in traffic reporting.
+
+Speed Compliance % =
+AVERAGE ( fct_traffic_observation[speed_compliance_ratio] )
+// format: 0.0%
+
+Delay Vehicle Hours =
+SUM ( fct_traffic_observation[delay_vehicle_hours] )
+// format: #,##0
+
+Annualised Delay Vehicle Hours =
+SUM ( fct_traffic_observation[annualised_delay_vehicle_hours] )
+// format: #,##0,, "m"
+
+Delay Minutes Per Vehicle =
+AVERAGE ( fct_traffic_observation[delay_minutes_per_vehicle] )
+// format: 0.0 "min"
+
+Congested Hours =
+CALCULATE ( [Observations], dim_congestion[congestion_key] >= 3 )
+// format: #,##0
+
+Congested Hours % =
+DIVIDE ( [Congested Hours], [Observations] )
+// format: 0.0%
+
+Severe Hours % =
+DIVIDE ( CALCULATE ( [Observations], dim_congestion[congestion_level] = "Severe" ), [Observations] )
+// format: 0.00%
+
+JTI vs Target =
+VAR Target = 1.15
+RETURN [Journey Time Index] - Target
+// format: +0.000;-0.000
+// Target from ITS-BRD-001 section 9.
+
+
+// =============================================================================
+// 03  RELIABILITY  --  folder: 03 Reliability
+// =============================================================================
+
+Buffer Index =
+DIVIDE ( [JTI P95], [Journey Time Index] )
+// format: 0.00
+// How much extra time a traveller must budget to arrive on time 19 times in 20.
+// Reliability, not the average, is what road users actually experience.
+
+Planning Time Index =
+[JTI P95]
+// format: 0.000
+
+Reliability Rating =
+SWITCH ( TRUE (),
+    [Buffer Index] <= 1.15, "A  Highly reliable",
+    [Buffer Index] <= 1.30, "B  Reliable",
+    [Buffer Index] <= 1.50, "C  Variable",
+    "D  Unreliable"
+)
+
+Worst Hour JTI =
+MAXX ( VALUES ( dim_time[hour_of_day] ), [Journey Time Index] )
+// format: 0.000
+
+
+// =============================================================================
+// 04  SAFETY  --  folder: 04 Safety
+// =============================================================================
+
+Collisions =
+SUM ( fct_traffic_observation[accident_flag] )
+// format: #,##0
+
+Incidents =
+SUM ( fct_traffic_observation[has_incident] )
+// format: #,##0
+
+Collision Rate % =
+DIVIDE ( [Collisions], [Observations] )
+// format: 0.000%
+
+Vehicle Kilometres =
+SUMX (
+    fct_traffic_observation,
+    fct_traffic_observation[vehicle_count]
+        * RELATED ( dim_site[segment_length_km] )
+)
+// format: #,##0,, "m"
+
+Collisions Per 100m Vehicle Km =
+DIVIDE ( [Collisions] * 100000000, [Vehicle Kilometres] )
+// format: 0.00
+// The internationally comparable exposure-adjusted safety rate.
+
+Collision Rate In Adverse Weather =
+DIVIDE (
+    CALCULATE ( [Collisions], dim_weather[weather_severity_band] IN { "Adverse", "Severe" } ),
+    CALCULATE ( [Observations], dim_weather[weather_severity_band] IN { "Adverse", "Severe" } )
+)
+// format: 0.000%
+
+Weather Collision Uplift =
+VAR Benign =
+    DIVIDE ( CALCULATE ( [Collisions], dim_weather[weather_severity_band] = "Benign" ),
+             CALCULATE ( [Observations], dim_weather[weather_severity_band] = "Benign" ) )
+RETURN DIVIDE ( [Collision Rate In Adverse Weather], Benign ) - 1
+// format: +0.0%;-0.0%
+
+Lane Closure Hours =
+SUM ( fct_traffic_observation[lane_closure_flag] )
+// format: #,##0
+
+Roadworks Hours =
+SUM ( fct_traffic_observation[roadworks_flag] )
+// format: #,##0
+
+Roadworks Hours % =
+DIVIDE ( [Roadworks Hours], [Observations] )
+// format: 0.0%
+
+
+// =============================================================================
+// 05  ENVIRONMENT  --  folder: 05 Environment
+// =============================================================================
+
+CO2 Tonnes =
+SUM ( fct_traffic_observation[co2_tonnes] )
+// format: #,##0
+
+Annualised CO2 Tonnes =
+SUM ( fct_traffic_observation[annualised_co2_tonnes] )
+// format: #,##0
+
+Annualised CO2 Megatonnes =
+DIVIDE ( [Annualised CO2 Tonnes], 1000000 )
+// format: 0.00 "Mt"
+
+CO2 Per Vehicle Km =
+DIVIDE ( [CO2 Tonnes] * 1000, [Vehicle Kilometres] )
+// format: 0.000 "kg/veh-km"
+
+Average AQI =
+AVERAGE ( fct_traffic_observation[air_quality_index] )
+// format: #,##0.0
+
+AQI Exceedance Hours =
+CALCULATE ( [Observations], fct_traffic_observation[air_quality_index] > 100 )
+// format: #,##0
+
+AQI Exceedance % =
+DIVIDE ( [AQI Exceedance Hours], [Observations] )
+// format: 0.00%
+
+Freight CO2 Share % =
+VAR FreightCO2 =
+    SUMX ( fct_traffic_observation,
+        ( fct_traffic_observation[hgv_count] * 0.905
+        + fct_traffic_observation[van_count] * 0.232 )
+        * RELATED ( dim_site[segment_length_km] ) / 1000 )
+RETURN DIVIDE ( FreightCO2, [CO2 Tonnes] )
+// format: 0.0%
+
+
+// =============================================================================
+// 06  ECONOMICS  --  folder: 06 Economics
+// =============================================================================
+
+Delay Cost =
+SUM ( fct_traffic_observation[delay_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+Carbon Cost =
+SUM ( fct_traffic_observation[carbon_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+Collision Cost =
+SUM ( fct_traffic_observation[collision_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+Breakdown Cost =
+SUM ( fct_traffic_observation[breakdown_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+Total Economic Cost =
+SUM ( fct_traffic_observation[total_economic_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+Annualised Economic Cost =
+SUM ( fct_traffic_observation[annualised_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+// ALWAYS label visuals using this measure as "annualised network estimate".
+
+Cost Per Observed Hour =
+DIVIDE ( [Total Economic Cost], [Observations] )
+// format: \£#,##0
+
+Cost Per Vehicle =
+DIVIDE ( [Total Economic Cost], [Total Vehicles] )
+// format: \£0.00
+
+// --- Annualised cost components -------------------------------------------
+// The waterfall on Dashboard 1 shows an ANNUALISED total, so its components
+// must also be annualised. Mixing observed components with an annualised total
+// silently understates every slice - the single easiest error to make in this
+// model, and the reason design rule 3 exists.
+
+Annualised Delay Cost =
+SUMX ( fct_traffic_observation,
+       fct_traffic_observation[delay_cost_gbp] * fct_traffic_observation[annualisation_factor] )
+// format: \£#,##0,,.0 "m"
+
+Annualised Carbon Cost =
+SUMX ( fct_traffic_observation,
+       fct_traffic_observation[carbon_cost_gbp] * fct_traffic_observation[annualisation_factor] )
+// format: \£#,##0,,.0 "m"
+
+Annualised Collision Cost =
+SUMX ( fct_traffic_observation,
+       fct_traffic_observation[collision_cost_gbp] * fct_traffic_observation[annualisation_factor] )
+// format: \£#,##0,,.0 "m"
+
+Annualised Breakdown Cost =
+SUMX ( fct_traffic_observation,
+       fct_traffic_observation[breakdown_cost_gbp] * fct_traffic_observation[annualisation_factor] )
+// format: \£#,##0,,.0 "m"
+
+Carbon Share Of Cost % =
+DIVIDE ( [Annualised Carbon Cost], [Annualised Economic Cost] )
+// format: 0.0%
+// Annualised basis: 44.4%. On the raw observed basis it is 43.4% - the two
+// differ because sampling density varies by site. Always state the basis.
+
+Cost Concentration Top 10 Sites % =
+VAR Top10 =
+    TOPN ( 10, ALLSELECTED ( dim_site[site_key] ), [Annualised Economic Cost], DESC )
+VAR Top10Cost = CALCULATE ( [Annualised Economic Cost], Top10 )
+VAR AllCost   = CALCULATE ( [Annualised Economic Cost], ALLSELECTED ( dim_site ) )
+RETURN DIVIDE ( Top10Cost, AllCost )
+// format: 0.0%
+
+Roadworks Attributable Cost =
+VAR CostWithWorks =
+    CALCULATE ( [Annualised Economic Cost], fct_traffic_observation[roadworks_flag] = 1 )
+VAR HoursWithWorks =
+    CALCULATE ( [Observations], fct_traffic_observation[roadworks_flag] = 1 )
+VAR BaselineCostPerHour =
+    CALCULATE ( DIVIDE ( [Annualised Economic Cost], [Observations] ),
+                fct_traffic_observation[roadworks_flag] = 0 )
+RETURN CostWithWorks - ( HoursWithWorks * BaselineCostPerHour )
+// format: \£#,##0,,.0 "m"
+// Counterfactual: cost of roadworks hours minus what those hours would have
+// cost at the no-works baseline rate. The largest CONTROLLABLE cost on the network.
+
+Collision Attributable Cost =
+VAR CostWithCollision =
+    CALCULATE ( [Delay Cost], fct_traffic_observation[accident_flag] = 1 )
+VAR HoursWithCollision =
+    CALCULATE ( [Observations], fct_traffic_observation[accident_flag] = 1 )
+VAR BaselinePerHour =
+    CALCULATE ( DIVIDE ( [Delay Cost], [Observations] ), fct_traffic_observation[accident_flag] = 0 )
+RETURN CostWithCollision - ( HoursWithCollision * BaselinePerHour )
+// format: \£#,##0,.0 "k"
+
+
+// =============================================================================
+// 07  DATA QUALITY  --  folder: 07 Data Quality
+// =============================================================================
+
+Records Received =
+COUNTROWS ( fct_data_quality )
+// format: #,##0
+
+Records Conformant =
+SUM ( fct_data_quality[is_fully_conformant] )
+// format: #,##0
+
+Conformance Rate % =
+DIVIDE ( [Records Conformant], [Records Received] )
+// format: 0.00%
+
+Records Quarantined =
+SUM ( fct_data_quality[is_quarantined] )
+// format: #,##0
+
+Quarantine Rate % =
+DIVIDE ( [Records Quarantined], [Records Received] )
+// format: 0.00%
+
+Detector Availability % =
+DIVIDE (
+    CALCULATE ( [Records Received], dim_sensor_status[is_operational] = 1 ),
+    [Records Received]
+)
+// format: 0.0%
+
+Conformance vs SLA =
+VAR SLA = 0.96
+RETURN [Conformance Rate %] - SLA
+// format: +0.00%;-0.00%
+
+DQ Status =
+SWITCH ( TRUE (),
+    [Conformance Rate %] >= 0.98, "🟢 Exceeding",
+    [Conformance Rate %] >= 0.96, "🟢 Meeting SLA",
+    [Conformance Rate %] >= 0.93, "🟡 At risk",
+    "🔴 Breach"
+)
+
+Sites Below SLA =
+VAR SLA = 0.96
+RETURN
+COUNTROWS ( FILTER ( VALUES ( dim_site[site_key] ), [Conformance Rate %] < SLA ) )
+// format: #,##0
+
+Top Failure Reason =
+VAR T =
+    TOPN ( 1,
+        FILTER ( VALUES ( fct_data_quality[dq_primary_failure] ),
+                 fct_data_quality[dq_primary_failure] <> "Passed" ),
+        [Records Received], DESC )
+RETURN CONCATENATEX ( T, fct_data_quality[dq_primary_failure], ", " )
+
+
+// =============================================================================
+// 08  PREDICTIVE  --  folder: 08 Predictive
+// =============================================================================
+
+Scored Hours =
+COUNTROWS ( fct_risk_score )
+// format: #,##0
+
+Mean Collision Risk =
+AVERAGE ( fct_risk_score[collision_risk_score] )
+// format: 0.0000
+
+Priority Risk Hours =
+SUM ( fct_risk_score[is_priority_risk_hour] )
+// format: #,##0
+
+Collisions In Priority Hours =
+CALCULATE ( SUM ( fct_risk_score[actual_accident_flag] ),
+            fct_risk_score[is_priority_risk_hour] = 1 )
+// format: #,##0
+
+Priority Hour Capture % =
+DIVIDE ( [Collisions In Priority Hours], SUM ( fct_risk_score[actual_accident_flag] ) )
+// format: 0.0%
+// Headline model value: share of real collisions falling in the top 5% of
+// hours the model flags. Report THIS, not accuracy.
+
+Model Lift =
+VAR PriorityRate =
+    DIVIDE ( [Collisions In Priority Hours],
+             CALCULATE ( [Scored Hours], fct_risk_score[is_priority_risk_hour] = 1 ) )
+VAR BaseRate = DIVIDE ( SUM ( fct_risk_score[actual_accident_flag] ), [Scored Hours] )
+RETURN DIVIDE ( PriorityRate, BaseRate )
+// format: 0.0"x"
+
+Congestion Forecast Accuracy % =
+AVERAGE ( fct_risk_score[is_congestion_prediction_correct] )
+// format: 0.0%
+
+Predicted Congested Probability =
+AVERAGE ( fct_risk_score[prob_congested] )
+// format: 0.0%
+
+Model Metric Value =
+SELECTEDVALUE ( dim_model_metric[metric_value] )
+// format: 0.0000
+
+Macro F1 Test =
+CALCULATE ( MAX ( dim_model_metric[metric_value] ),
+    dim_model_metric[model_name] = "Congestion Forecast",
+    dim_model_metric[metric_name] = "Macro F1",
+    dim_model_metric[data_split] = "Test 2025" )
+// format: 0.000
+
+PR AUC Test =
+CALCULATE ( MAX ( dim_model_metric[metric_value] ),
+    dim_model_metric[model_name] = "Collision Risk",
+    dim_model_metric[metric_name] = "PR AUC",
+    dim_model_metric[data_split] = "Test 2025" )
+// format: 0.000
+
+PR AUC Improvement vs Baseline =
+VAR Base =
+    CALCULATE ( MAX ( dim_model_metric[metric_value] ),
+        dim_model_metric[model_name] = "Collision Risk",
+        dim_model_metric[metric_name] = "PR AUC",
+        dim_model_metric[data_split] = "Baseline" )
+RETURN DIVIDE ( [PR AUC Test], Base )
+// format: 0.0"x baseline"
+
+
+// =============================================================================
+// 09  TIME INTELLIGENCE  --  folder: 09 Time Intelligence
+// =============================================================================
+
+JTI LY =
+CALCULATE ( [Journey Time Index], SAMEPERIODLASTYEAR ( dim_date[full_date] ) )
+// format: 0.000
+
+JTI YoY % =
+DIVIDE ( [Journey Time Index] - [JTI LY], [JTI LY] )
+// format: +0.0%;-0.0%
+
+Total Vehicles LY =
+CALCULATE ( [Total Vehicles], SAMEPERIODLASTYEAR ( dim_date[full_date] ) )
+// format: #,##0
+
+Traffic Growth YoY % =
+DIVIDE ( [Total Vehicles] - [Total Vehicles LY], [Total Vehicles LY] )
+// format: +0.0%;-0.0%
+
+Economic Cost LY =
+CALCULATE ( [Annualised Economic Cost], SAMEPERIODLASTYEAR ( dim_date[full_date] ) )
+// format: \£#,##0,,.0 "m"
+
+Cost Growth YoY =
+[Annualised Economic Cost] - [Economic Cost LY]
+// format: +\£#,##0,,.0 "m";-\£#,##0,,.0 "m"
+
+JTI Rolling 90 Day =
+CALCULATE (
+    [Journey Time Index],
+    DATESINPERIOD ( dim_date[full_date], MAX ( dim_date[full_date] ), -90, DAY )
+)
+// format: 0.000
+
+Collisions Rolling 12 Month =
+CALCULATE (
+    [Collisions],
+    DATESINPERIOD ( dim_date[full_date], MAX ( dim_date[full_date] ), -12, MONTH )
+)
+// format: #,##0
+
+Cost YTD =
+TOTALYTD ( [Annualised Economic Cost], dim_date[full_date] )
+// format: \£#,##0,,.0 "m"
+
+
+// =============================================================================
+// 10  UX  --  folder: 10 UX and Narrative
+// =============================================================================
+
+KPI Trend Icon =
+SWITCH ( TRUE (),
+    ISBLANK ( [JTI YoY %] ), "",
+    [JTI YoY %] > 0.02,  "🔺 Deteriorating",
+    [JTI YoY %] < -0.02, "🔻 Improving",
+    "▬ Stable"
+)
+
+Selected Period Label =
+VAR MinD = MIN ( dim_date[full_date] )
+VAR MaxD = MAX ( dim_date[full_date] )
+RETURN FORMAT ( MinD, "dd MMM yyyy" ) & " – " & FORMAT ( MaxD, "dd MMM yyyy" )
+
+Dynamic Title Network =
+"Network performance  |  " & [Selected Period Label] &
+"  |  JTI " & FORMAT ( [Journey Time Index], "0.000" ) &
+"  |  " & FORMAT ( [Annualised Economic Cost], "\£#,##0,,.0" ) & "m per year"
+
+Executive Narrative =
+VAR TopSite =
+    CONCATENATEX ( TOPN ( 1, ALLSELECTED ( dim_site[site_code] ),
+                          [Annualised Economic Cost], DESC ),
+                   dim_site[site_code] )
+RETURN
+"The monitored network carries " &
+FORMAT ( [Annualised Economic Cost], "\£#,##0,,.0" ) & "m of avoidable cost per year. " &
+"Carbon accounts for " & FORMAT ( [Carbon Share Of Cost %], "0%" ) & ". " &
+"The highest-cost location is " & TopSite & ". " &
+"Journey times are " & FORMAT ( [JTI YoY %], "+0.0%;-0.0%" ) & " year on year."
+
+Sampling Disclaimer =
+"Figures labelled 'annualised' are grossed up from a " &
+FORMAT ( [Sampling Rate %], "0.0%" ) &
+" sample of site-hours using site-level expansion factors."
+
+No Data Message =
+IF ( ISBLANK ( [Observations] ),
+     "No detector observations match the current filter selection.", "" )

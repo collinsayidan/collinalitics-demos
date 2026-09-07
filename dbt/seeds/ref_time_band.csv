@@ -1,0 +1,25 @@
+hour_of_day,time_band,time_band_order,is_peak,peak_direction,operational_shift
+0,Night,1,0,None,Night
+1,Night,1,0,None,Night
+2,Night,1,0,None,Night
+3,Night,1,0,None,Night
+4,Night,1,0,None,Night
+5,Early Morning,2,0,None,Early
+6,Early Morning,2,0,None,Early
+7,AM Peak,3,1,Inbound,Day
+8,AM Peak,3,1,Inbound,Day
+9,AM Shoulder,4,0,Inbound,Day
+10,Inter Peak,5,0,None,Day
+11,Inter Peak,5,0,None,Day
+12,Inter Peak,5,0,None,Day
+13,Inter Peak,5,0,None,Day
+14,Inter Peak,5,0,None,Day
+15,PM Shoulder,6,0,Outbound,Day
+16,PM Peak,7,1,Outbound,Day
+17,PM Peak,7,1,Outbound,Day
+18,PM Peak,7,1,Outbound,Evening
+19,Evening,8,0,None,Evening
+20,Evening,8,0,None,Evening
+21,Evening,8,0,None,Evening
+22,Night,1,0,None,Night
+23,Night,1,0,None,Night

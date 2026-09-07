@@ -1,0 +1,6 @@
+vehicle_class,vehicle_class_group,pcu_factor,co2_kg_per_km,vot_parameter_code,is_freight,display_order
+Car,Light,1.0,0.168,VOT_CAR,0,1
+Van,Light,1.0,0.232,VOT_VAN,1,2
+HGV,Heavy,2.5,0.905,VOT_HGV,1,3
+Bus,Heavy,2.0,0.822,VOT_BUS,0,4
+Motorcycle,Light,0.4,0.095,VOT_MOTORCYCLE,0,5

@@ -1,0 +1,208 @@
+// =============================================================================
+//  DASHBOARD 2  -  CONGESTION AND RELIABILITY INTELLIGENCE
+//  Serving tables : rpt_d2_congestion_profile  (3,551 rows, site x hour x day type)
+//                   rpt_d2_delay_attribution   (816 rows, cause x corridor x band)
+//                   rpt_d2_hour_dow_matrix     (3,696 rows, hour x weekday x corridor)
+//  Display folder : D2 Congestion
+// =============================================================================
+//  All means below are observation-weighted. See the weighting note in
+//  D1_executive.dax - it applies identically here.
+// =============================================================================
+
+
+// -----------------------------------------------------------------------------
+// Profile  (visual 2.9  -  24-hour shape)
+// -----------------------------------------------------------------------------
+
+D2 Profile Observations =
+SUM ( rpt_d2_congestion_profile[observation_count] )
+// format: #,##0
+
+D2 Mean Flow =
+DIVIDE (
+    SUMX ( rpt_d2_congestion_profile,
+           rpt_d2_congestion_profile[mean_flow] * rpt_d2_congestion_profile[observation_count] ),
+    [D2 Profile Observations]
+)
+// format: #,##0 "veh/h"
+
+D2 Journey Time Index =
+DIVIDE (
+    SUMX ( rpt_d2_congestion_profile,
+           rpt_d2_congestion_profile[mean_journey_time_index]
+         * rpt_d2_congestion_profile[observation_count] ),
+    [D2 Profile Observations]
+)
+// format: 0.000
+
+D2 Harmonic Mean Speed =
+DIVIDE (
+    [D2 Profile Observations],
+    SUMX ( rpt_d2_congestion_profile,
+           DIVIDE ( rpt_d2_congestion_profile[observation_count],
+                    rpt_d2_congestion_profile[harmonic_mean_speed_kmh] ) )
+)
+// format: #,##0.0 "km/h"
+
+D2 Congested Hours % =
+DIVIDE ( SUM ( rpt_d2_congestion_profile[congested_hours] ), [D2 Profile Observations] )
+// format: 0.0%
+
+D2 Severe Hours % =
+DIVIDE ( SUM ( rpt_d2_congestion_profile[severe_hours] ), [D2 Profile Observations] )
+// format: 0.00%
+
+D2 Peak To Trough Ratio =
+VAR PeakFlow    = CALCULATE ( [D2 Mean Flow], rpt_d2_congestion_profile[is_peak] = 1 )
+VAR OffPeakFlow = CALCULATE ( [D2 Mean Flow], rpt_d2_congestion_profile[is_peak] = 0 )
+RETURN DIVIDE ( PeakFlow, OffPeakFlow )
+// format: 0.0"x"
+
+D2 Weekend Peak Suppression % =
+VAR Weekday =
+    CALCULATE ( [D2 Mean Flow], rpt_d2_congestion_profile[day_type] = "Weekday",
+                                rpt_d2_congestion_profile[is_peak] = 1 )
+VAR Weekend =
+    CALCULATE ( [D2 Mean Flow], rpt_d2_congestion_profile[day_type] = "Weekend",
+                                rpt_d2_congestion_profile[is_peak] = 1 )
+RETURN DIVIDE ( Weekend - Weekday, Weekday )
+// format: +0.0%;-0.0%
+// Expected around -64%: the commuter peak is what the weekend loses.
+
+
+// -----------------------------------------------------------------------------
+// Reliability  (visual 2.13  -  least reliable sites)
+// -----------------------------------------------------------------------------
+
+D2 P95 JTI =
+DIVIDE (
+    SUMX ( rpt_d2_congestion_profile,
+           rpt_d2_congestion_profile[p95_journey_time_index]
+         * rpt_d2_congestion_profile[observation_count] ),
+    [D2 Profile Observations]
+)
+// format: 0.000
+
+D2 Buffer Index =
+DIVIDE ( [D2 P95 JTI], [D2 Journey Time Index] )
+// format: 0.00
+// How much extra time a traveller must budget to arrive on time 19 times in 20.
+
+D2 Reliability Rating =
+SWITCH ( TRUE (),
+    ISBLANK ( [D2 Buffer Index] ), "",
+    [D2 Buffer Index] <= 1.15, "A  Highly reliable",
+    [D2 Buffer Index] <= 1.30, "B  Reliable",
+    [D2 Buffer Index] <= 1.50, "C  Variable",
+    "D  Unreliable"
+)
+
+D2 Unreliable Sites =
+COUNTROWS (
+    FILTER ( VALUES ( rpt_d2_congestion_profile[site_key] ), [D2 Buffer Index] > 1.30 )
+)
+// format: #,##0
+
+
+// -----------------------------------------------------------------------------
+// Delay attribution  (visual 2.11)  -  the counterfactual, not the raw total
+// -----------------------------------------------------------------------------
+
+D2 Disrupted Hours =
+SUM ( rpt_d2_delay_attribution[disrupted_hours] )
+// format: #,##0
+
+D2 Delay Cost =
+SUM ( rpt_d2_delay_attribution[delay_cost_gbp] )
+// format: \£#,##0,.0 "k"
+
+D2 Delay Cost Per Hour =
+DIVIDE ( [D2 Delay Cost], [D2 Disrupted Hours] )
+// format: \£#,##0
+
+D2 Excess Delay Cost =
+SUM ( rpt_d2_delay_attribution[excess_delay_cost_gbp] )
+// format: \£#,##0,.0 "k"
+// Cost above what these hours would have cost undisrupted, matched on corridor
+// and time band. This is the attributable number - the raw total is inflated by
+// the fact that disruption is concentrated in already-busy periods.
+
+D2 Excess Annual Cost =
+SUM ( rpt_d2_delay_attribution[excess_annualised_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+D2 Controllable Annual Cost =
+CALCULATE ( [D2 Excess Annual Cost], rpt_d2_delay_attribution[is_controllable] = 1 )
+// format: \£#,##0,,.0 "m"
+// Roadworks and planned events: disruption we schedule rather than suffer.
+// Expected around \£44m per year.
+
+D2 Collision Cost Multiple =
+VAR CollisionRate =
+    CALCULATE ( [D2 Delay Cost Per Hour],
+                rpt_d2_delay_attribution[disruption_cause] = "1 Collision" )
+VAR BaselineRate =
+    CALCULATE ( [D2 Delay Cost Per Hour],
+                rpt_d2_delay_attribution[disruption_cause] = "5 No disruption" )
+RETURN DIVIDE ( CollisionRate, BaselineRate )
+// format: 0.0"x"
+// Expected around 9.2x. The case for cutting incident clearance time.
+
+D2 Excess JTI =
+DIVIDE (
+    SUMX ( rpt_d2_delay_attribution,
+           rpt_d2_delay_attribution[excess_journey_time_index]
+         * rpt_d2_delay_attribution[disrupted_hours] ),
+    [D2 Disrupted Hours]
+)
+// format: +0.000;-0.000
+
+
+// -----------------------------------------------------------------------------
+// Heat map  (visual 2.12  -  hour x day of week)
+// -----------------------------------------------------------------------------
+
+D2 Matrix Observations =
+SUM ( rpt_d2_hour_dow_matrix[observation_count] )
+// format: #,##0
+
+D2 Matrix JTI =
+DIVIDE (
+    SUMX ( rpt_d2_hour_dow_matrix,
+           rpt_d2_hour_dow_matrix[mean_journey_time_index]
+         * rpt_d2_hour_dow_matrix[observation_count] ),
+    [D2 Matrix Observations]
+)
+// format: 0.000
+// Bind the matrix background colour to this measure, rules-based:
+//   <=1.15 #2E7D32 | <=1.45 #F9A825 | <=2.00 #EF6C00 | >2.00 #C62828
+
+D2 Matrix Delay Cost Share % =
+DIVIDE (
+    SUM ( rpt_d2_hour_dow_matrix[delay_cost_gbp] ),
+    CALCULATE ( SUM ( rpt_d2_hour_dow_matrix[delay_cost_gbp] ),
+                ALLSELECTED ( rpt_d2_hour_dow_matrix ) )
+)
+// format: 0.0%
+// Answers "which cell of the week carries the cost", not just "which is slow".
+
+D2 Worst Cell Label =
+VAR T =
+    TOPN ( 1, SUMMARIZE ( rpt_d2_hour_dow_matrix,
+                          rpt_d2_hour_dow_matrix[day_name],
+                          rpt_d2_hour_dow_matrix[hour_label] ),
+           [D2 Matrix JTI], DESC )
+RETURN CONCATENATEX ( T,
+    rpt_d2_hour_dow_matrix[day_name] & " " & rpt_d2_hour_dow_matrix[hour_label], ", " )
+
+
+// =============================================================================
+//  SHARED LIBRARY MEASURES ALSO USED ON THIS PAGE
+//    [Journey Time Index]  [Roadworks Attributable Cost]  [Selected Period Label]
+//    [Sampling Disclaimer]  [Reliability Rating]
+//
+//  RECONCILIATION
+//    [D2 Profile Observations] = [D2 Matrix Observations] = [Observations] = 96,652
+//    [D2 Journey Time Index]   = [Journey Time Index]                      = 1.167
+//    [D2 Collision Cost Multiple]                                          ~ 9.2x
+// =============================================================================

@@ -1,0 +1,5 @@
+congestion_key,congestion_level,jti_lower_bound,jti_upper_bound,display_colour_hex,operational_response,is_target_breach
+1,Low,1.00,1.15,"#2E7D32",Free flow or near free flow. No intervention required.,0
+2,Medium,1.15,1.45,"#F9A825",Journey times 15 to 45 per cent above free flow. Monitor.,0
+3,High,1.45,2.00,"#EF6C00",Journey times 45 to 100 per cent above free flow. Active traffic management triggered.,1
+4,Severe,2.00,99.00,"#C62828",Journey times at least double free flow. Incident response and variable message signing.,1

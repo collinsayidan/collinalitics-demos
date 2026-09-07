@@ -1,0 +1,14 @@
+parameter_code,parameter_name,parameter_value,unit,price_base_year,source_reference,notes
+VOT_CAR,Value of time - car,16.00,GBP per vehicle hour,2023,"DfT TAG Data Book, values of travel time; uplifted from 2010 prices","Car VoT per vehicle-hour = occupancy-weighted blend of work / commuting / other purposes at 1.55 occupancy"
+VOT_VAN,Value of time - LGV / van,24.00,GBP per vehicle hour,2023,"DfT TAG Data Book, working time values","Predominantly working time; includes driver and vehicle operating premium"
+VOT_HGV,Value of time - HGV,35.00,GBP per vehicle hour,2023,"DfT TAG Data Book, road freight values of travel time (2025 revision)","Freight VoT revised upward in the 2025 TAG update; review annually"
+VOT_BUS,Value of time - bus and coach,150.00,GBP per vehicle hour,2023,"DfT TAG Data Book, PSV occupancy x passenger VoT","Assumes mean occupancy of ~13 passengers plus driver working time"
+VOT_MOTORCYCLE,Value of time - motorcycle,14.00,GBP per vehicle hour,2023,"DfT TAG Data Book, non-work and commuting blend","Single occupancy assumed"
+CARBON_VALUE,Central non-traded carbon value,273.00,GBP per tonne CO2e,2022,"DESNZ Green Book supplementary guidance, carbon values 2025","Central series; +/-50% sensitivity range; rises to GBP 398 per tonne by 2050"
+CASUALTY_FATAL,Average value of prevention - fatal casualty,2411659.00,GBP per casualty,2023,"DfT RAS4001 average value of prevention of collisions","GB average, human costs plus lost output plus medical and police costs"
+CASUALTY_SERIOUS,Average value of prevention - serious casualty,271003.00,GBP per casualty,2023,DfT RAS4001,GB average
+CASUALTY_SLIGHT,Average value of prevention - slight casualty,20892.00,GBP per casualty,2023,DfT RAS4001,GB average
+COLLISION_AVERAGE,Average cost per reported collision,82000.00,GBP per collision,2023,"Derived from RAS4001 using GB trunk-road severity mix","0.6% fatal / 10.0% serious / 89.4% slight at 1.30 casualties per collision plus damage-only allowance"
+INCIDENT_BREAKDOWN,Average network cost per breakdown event,1400.00,GBP per event,2023,Transport Scotland incident management benchmark,Recovery plus residual delay not captured in link journey time
+CARBON_SENSITIVITY_LOW,Carbon value - low sensitivity,136.50,GBP per tonne CO2e,2022,DESNZ carbon values 2025 (-50%),Sensitivity testing only
+CARBON_SENSITIVITY_HIGH,Carbon value - high sensitivity,409.50,GBP per tonne CO2e,2022,DESNZ carbon values 2025 (+50%),Sensitivity testing only

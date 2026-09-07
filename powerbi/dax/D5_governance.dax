@@ -1,0 +1,192 @@
+// =============================================================================
+//  DASHBOARD 5  -  DATA GOVERNANCE AND ASSET HEALTH
+//  Serving tables : rpt_d5_governance_daily (59,481 rows, date x site x status)
+//                   rpt_d5_rule_failures    (52,224 rows, rule x month x site)
+//  Display folder : D5 Governance
+// =============================================================================
+//  Rates here are computed from summed counts, never from an average of daily
+//  rates. A site reporting 4 records on Sunday must not carry the same weight
+//  as one reporting 400 on Monday.
+// =============================================================================
+
+
+// -----------------------------------------------------------------------------
+// Volume and conformance
+// -----------------------------------------------------------------------------
+
+D5 Records Received =
+SUM ( rpt_d5_governance_daily[records_received] )
+// format: #,##0
+
+D5 Records Conformant =
+SUM ( rpt_d5_governance_daily[records_conformant] )
+// format: #,##0
+
+D5 Records Quarantined =
+SUM ( rpt_d5_governance_daily[records_quarantined] )
+// format: #,##0
+
+D5 Records With Warning =
+SUM ( rpt_d5_governance_daily[records_with_warning] )
+// format: #,##0
+
+D5 Conformance Rate % =
+DIVIDE ( [D5 Records Conformant], [D5 Records Received] )
+// format: 0.00%
+// Expected 95.70%.
+
+D5 Quarantine Rate % =
+DIVIDE ( [D5 Records Quarantined], [D5 Records Received] )
+// format: 0.00%
+// Expected 3.35%.
+
+
+// -----------------------------------------------------------------------------
+// SLA position
+// -----------------------------------------------------------------------------
+
+D5 SLA Target =
+0.96
+// format: 0.00%
+
+D5 Conformance vs SLA =
+[D5 Conformance Rate %] - [D5 SLA Target]
+// format: +0.00%;-0.00%
+
+D5 SLA Status =
+SWITCH ( TRUE (),
+    ISBLANK ( [D5 Conformance Rate %] ), "",
+    [D5 Conformance Rate %] >= 0.98, "🟢 Exceeding",
+    [D5 Conformance Rate %] >= 0.96, "🟢 Meeting SLA",
+    [D5 Conformance Rate %] >= 0.93, "🟡 At risk",
+    "🔴 Breach"
+)
+
+D5 SLA Breach Days =
+CALCULATE ( DISTINCTCOUNT ( rpt_d5_governance_daily[date_key] ),
+            rpt_d5_governance_daily[is_sla_breach] = 1 )
+// format: #,##0
+
+D5 Sites Below SLA =
+COUNTROWS (
+    FILTER ( VALUES ( rpt_d5_governance_daily[site_key] ),
+             [D5 Conformance Rate %] < [D5 SLA Target] )
+)
+// format: #,##0
+// The length of the maintenance action list.
+
+D5 Worst Operating Unit =
+VAR T =
+    TOPN ( 1, VALUES ( rpt_d5_governance_daily[operating_unit] ),
+           [D5 Quarantine Rate %], DESC )
+RETURN CONCATENATEX ( T, rpt_d5_governance_daily[operating_unit], ", " )
+// The first evidenced, like-for-like SLA comparison between operating companies.
+
+
+// -----------------------------------------------------------------------------
+// Asset health  -  missingness as a maintenance signal
+// -----------------------------------------------------------------------------
+
+D5 Detector Availability % =
+DIVIDE (
+    CALCULATE ( [D5 Records Received], rpt_d5_governance_daily[sensor_status] = "Active" ),
+    [D5 Records Received]
+)
+// format: 0.0%
+// Expected 92.13% against a 95% target - a standing gap with a named owner.
+
+D5 Faulty Quarantine Rate % =
+CALCULATE ( [D5 Quarantine Rate %], rpt_d5_governance_daily[sensor_status] = "Faulty" )
+// format: 0.00%
+
+D5 Active Quarantine Rate % =
+CALCULATE ( [D5 Quarantine Rate %], rpt_d5_governance_daily[sensor_status] = "Active" )
+// format: 0.00%
+
+D5 Missingness Concentration =
+DIVIDE ( [D5 Faulty Quarantine Rate %], [D5 Active Quarantine Rate %] )
+// format: 0.0"x"
+// Expected around 13.8x. This is the proof that missingness is Missing At Random
+// conditional on detector status - which converts a statistical caveat into a
+// maintenance prioritisation rule: fix the detectors destroying the most
+// analysis, not the ones that broke first.
+
+D5 Analytical Loss Statement =
+"Faulty detectors quarantine " & FORMAT ( [D5 Faulty Quarantine Rate %], "0.0%" ) &
+" of their records against " & FORMAT ( [D5 Active Quarantine Rate %], "0.0%" ) &
+" for healthy ones - a " & FORMAT ( [D5 Missingness Concentration], "0.0" ) &
+"x concentration of data loss in known-faulty assets."
+
+
+// -----------------------------------------------------------------------------
+// Rule failures  (visual 5.10)
+// -----------------------------------------------------------------------------
+
+D5 Rule Failures =
+SUM ( rpt_d5_rule_failures[failure_count] )
+// format: #,##0
+
+D5 Rule Failure Rate % =
+DIVIDE ( [D5 Rule Failures], SUM ( rpt_d5_rule_failures[records_evaluated] ) )
+// format: 0.000%
+
+D5 Rules Above Threshold =
+COUNTROWS (
+    FILTER ( VALUES ( rpt_d5_rule_failures[rule_id] ),
+             [D5 Rule Failure Rate %] > CALCULATE ( MAX ( rpt_d5_rule_failures[expected_threshold_pct] ) ) / 100 )
+)
+// format: #,##0
+// Whether a rule is inside tolerance is answered by the model, not by the reader
+// squinting at a bar chart. The threshold ships in the ref_dq_rules seed.
+
+D5 Error Severity Failures =
+CALCULATE ( [D5 Rule Failures], rpt_d5_rule_failures[severity] = "Error" )
+// format: #,##0
+
+D5 Warning Severity Failures =
+CALCULATE ( [D5 Rule Failures], rpt_d5_rule_failures[severity] = "Warning" )
+// format: #,##0
+
+D5 Top Failing Rule =
+VAR T =
+    TOPN ( 1, VALUES ( rpt_d5_rule_failures[rule_name] ), [D5 Rule Failures], DESC )
+RETURN CONCATENATEX ( T, rpt_d5_rule_failures[rule_name], ", " )
+
+D5 Rule Threshold Status =
+VAR Rate      = [D5 Rule Failure Rate %]
+VAR Threshold = MAX ( rpt_d5_rule_failures[expected_threshold_pct] ) / 100
+RETURN
+SWITCH ( TRUE (),
+    ISBLANK ( Rate ), "",
+    Rate > Threshold,        "🔴 Above tolerance",
+    Rate > Threshold * 0.75, "🟡 Approaching tolerance",
+    "🟢 Within tolerance"
+)
+
+
+// -----------------------------------------------------------------------------
+// Trust indicator published to the other four dashboards
+// -----------------------------------------------------------------------------
+
+D5 Data Trust Badge =
+"Data trust: " & FORMAT ( [D5 Conformance Rate %], "0.0%" ) & " conformant, " &
+FORMAT ( [D5 Records Quarantined], "#,##0" ) & " records quarantined, " &
+FORMAT ( [D5 Sites Below SLA], "#,##0" ) & " sites below SLA."
+// Surface this on Dashboard 1 as well. A performance figure without its data
+// quality position is an assertion, not a measurement.
+
+
+// =============================================================================
+//  SHARED LIBRARY MEASURES ALSO USED ON THIS PAGE
+//    [Conformance Rate %]  [Quarantine Rate %]  [Detector Availability %]
+//    [DQ Status]  [Top Failure Reason]  [Selected Period Label]
+//
+//  RECONCILIATION
+//    [D5 Records Received]    = [Records Received]        = 100,000
+//    [D5 Conformance Rate %]  = [Conformance Rate %]      = 95.70%
+//    [D5 Quarantine Rate %]   = [Quarantine Rate %]       = 3.35%
+//    [D5 Detector Availability %] = [Detector Availability %] = 92.13%
+//
+//  RLS: this page is filtered by dim_site[operating_unit]. Each operating
+//  company sees only its own backlog; Transport Scotland sees all and compares.
+// =============================================================================

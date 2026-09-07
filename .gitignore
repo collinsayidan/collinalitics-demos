@@ -1,0 +1,24 @@
+﻿# Large source data — regenerate with demos/scotland-its/build_data.py
+powerbi/exports/
+data/*.duckdb
+data/*.duckdb.wal
+data/*.csv
+data/_backup/
+
+# Superseded working folders
+site_static/
+_old_ITS_demos_site/
+_old_ITS_website/
+
+# Python
+__pycache__/
+*.pyc
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# OS
+Thumbs.db
+.DS_Store

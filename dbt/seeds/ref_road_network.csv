@@ -1,0 +1,10 @@
+road_id,road_name,road_classification,corridor,strategic_function,operating_unit,is_anglo_scottish,design_capacity_band
+M8,M8 Glasgow to Edinburgh Motorway,Motorway,Central Belt Core,Inter-urban strategic and urban commuter,South West / South East,0,Very High
+M74,M74 Glasgow to Gretna Motorway,Motorway,Anglo-Scottish Freight,Strategic freight and long distance,South West,1,Very High
+M77,M77 Glasgow to Ayrshire Motorway,Motorway,Ayrshire,Urban commuter radial,South West,0,High
+M90,M90 Edinburgh to Perth Motorway,Motorway,Forth and Tay,Inter-urban strategic,South East,0,High
+A9,A9 Perth to Inverness Trunk Road,Trunk Dual Carriageway,Highland Spine,Long distance strategic and tourism,North West,0,Medium
+A90,A90 Edinburgh to Fraserburgh Trunk Road,Trunk Dual Carriageway,East Coast,Inter-urban strategic and energy sector access,South East / North East,0,High
+A96,A96 Aberdeen to Inverness Trunk Road,Trunk Dual Carriageway,North East Corridor,Inter-urban strategic,North East,0,Medium
+A1,A1 Edinburgh to Berwick Trunk Road,Trunk Dual Carriageway,East Coast Anglo-Scottish,Long distance strategic,South East,1,Medium
+A82,A82 Glasgow to Inverness Trunk Road,Trunk Single Carriageway,West Highland,Tourism and lifeline community access,North West,0,Low

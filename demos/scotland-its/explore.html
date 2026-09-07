@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explore the network — Scotland ITS — Collinalitics Ltd</title>
+<meta name="description" content="Filter and sort all 74 sensor sites by cost, congestion and collision risk. Synthetic demonstration data.">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<header class="mast">
+  <div class="mast-inner">
+    <a class="brand" href="../index.html">
+      <img src="../LOGO.png" alt="Collinalitics Ltd">
+      <span class="divider">|</span>
+      <span class="proj">Scotland ITS</span>
+    </a>
+    <nav class="pages">
+      <a href="../index.html">&larr; All work</a>
+      <a href="index.html">Overview</a>
+      <a href="executive.html">Network</a>
+      <a href="explore.html" class="on">Explore</a>
+      <a href="methodology.html">Method</a>
+      <a href="https://www.collinalitics.co.uk/contact" class="cta">Book a free review</a>
+    </nav>
+  </div>
+</header>
+
+<div class="synthetic">
+  <div class="inner">
+    <strong>Synthetic demonstration data</strong> — not Transport Scotland data.
+    <a href="methodology.html">Method and limitations →</a>
+  </div>
+</div>
+
+<main>
+
+<p class="eyebrow">Site explorer</p>
+<h1>Every site, filterable</h1>
+<p class="sub">
+  All 74 sensor sites. Filter, search, and click any column heading to sort.
+  Everything runs in your browser — there is no server behind this page.
+</p>
+
+<div class="controls">
+  <select id="fCity"><option value="">All cities</option></select>
+  <select id="fRoad"><option value="">All roads</option></select>
+  <select id="fSetting"><option value="">All settings</option></select>
+  <input type="search" id="q" placeholder="Search site or road" aria-label="Search sites">
+</div>
+
+<p class="small" id="count"></p>
+
+<div class="card" style="overflow-x:auto">
+  <table id="tSites"><thead><tr>
+    <th data-key="code">Site</th>
+    <th data-key="road">Road</th>
+    <th data-key="city">City</th>
+    <th data-key="setting">Setting</th>
+    <th class="num" data-key="jti">JTI</th>
+    <th class="num" data-key="congested_pct">Congested</th>
+    <th class="num" data-key="risk">Risk</th>
+    <th class="num" data-key="collisions">Collisions</th>
+    <th class="num" data-key="cost_m">£m / year</th>
+  </tr></thead><tbody></tbody></table>
+</div>
+
+<h2>Congestion against journey time</h2>
+<p class="note">
+  Bubble size is traffic volume, colour is corridor. Each bubble is one site.
+</p>
+<div class="card"><div class="chartbox tall"><canvas id="cProfile"></canvas></div></div>
+
+<div class="finding">
+  Journey times rise steadily with congested share, but <strong>cost rises far
+  faster</strong>. The 14 sites above 15% congested hours average <strong>£36.3m a
+  year each</strong>, against £10.1m for the 42 sites below 5% — roughly 3.6× the
+  cost from the same class of asset. The driver is volume multiplied by delay, not a
+  collapse in throughput: no site here reaches the hypercongestion threshold where
+  flow itself starts falling. That matters for intervention design — these are
+  demand-management sites, not capacity-failure sites.
+</div>
+
+<footer class="foot"><div class="inner">
+  Synthetic demonstration data ·
+  <a href="methodology.html">Method and limitations</a>
+  <br><br>
+  <a href="https://www.collinalitics.co.uk/">Collinalitics Ltd</a> ·
+  Registered in Scotland · Company No. SC874504 · Edinburgh, United Kingdom
+</div></footer>
+
+</main>
+
+<script src="data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="../app.js"></script>
+<script>
+(function () {
+  const rgba = (hex, a) => {
+    const h = hex.replace('#', '');
+    const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  };
+
+  const fCity = document.getElementById('fCity');
+  const fRoad = document.getElementById('fRoad');
+  const fSet  = document.getElementById('fSetting');
+  const q     = document.getElementById('q');
+  const tb    = document.querySelector('#tSites tbody');
+
+  [...new Set(ITS.sites.map(s => s.city))].sort().forEach(v => fCity.add(new Option(v, v)));
+  [...new Set(ITS.sites.map(s => s.road))].sort().forEach(v => fRoad.add(new Option(v, v)));
+  [...new Set(ITS.sites.map(s => s.setting))].sort().forEach(v => fSet.add(new Option(v, v)));
+
+  const maxCost = Math.max(...ITS.sites.map(s => s.cost_m));
+  const maxJti  = Math.max(...ITS.sites.map(s => s.jti));
+  const rows = ITS.sites.slice();
+  let chart;
+
+  function band(jti) {
+    if (jti >= 1.45) return C.red;
+    if (jti >= 1.15) return C.orange;
+    return C.green;
+  }
+
+  function current() {
+    const term = q.value.trim().toLowerCase();
+    return rows.filter(s =>
+      (!fCity.value || s.city === fCity.value) &&
+      (!fRoad.value || s.road === fRoad.value) &&
+      (!fSet.value  || s.setting === fSet.value) &&
+      (!term || s.code.toLowerCase().includes(term) || s.road.toLowerCase().includes(term)));
+  }
+
+  function render() {
+    const S = current();
+    document.getElementById('count').textContent =
+      S.length === ITS.sites.length
+        ? 'Showing all 74 sites.'
+        : 'Showing ' + S.length + ' of 74 sites.';
+
+    tb.innerHTML = S.map(s => {
+      const b = band(s.jti);
+      return '<tr>' +
+        '<td>' + s.code + '</td>' +
+        '<td>' + s.road + '</td>' +
+        '<td>' + s.city + '</td>' +
+        '<td class="small">' + s.setting + '</td>' +
+        '<td class="num"><span class="pill" style="background:' + rgba(b, 0.12) +
+          ';color:' + b + '">' + s.jti.toFixed(3) + '</span></td>' +
+        '<td class="num">' + s.congested_pct.toFixed(1) + '%</td>' +
+        '<td class="num">' + s.risk.toFixed(4) + '</td>' +
+        '<td class="num">' + s.collisions + '</td>' +
+        '<td class="num">' + s.cost_m.toFixed(2) +
+          '<span class="bar" style="width:' + (s.cost_m / maxCost * 40).toFixed(0) + 'px"></span></td>' +
+        '</tr>';
+    }).join('');
+
+    drawChart(S);
+  }
+
+  function drawChart(S) {
+    const byCorr = {};
+    S.forEach(s => (byCorr[s.corridor] = byCorr[s.corridor] || []).push(s));
+    const palette = [C.blue, C.teal, C.orange, C.green, C.amber, C.red, C.ink2, '#5E35B1', '#00838F'];
+    const maxVeh = Math.max(...S.map(s => s.vehicles), 1);
+
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('cProfile'), {
+      type: 'bubble',
+      data: {
+        datasets: Object.keys(byCorr).sort().map((k, i) => ({
+          label: k,
+          data: byCorr[k].map(s => ({
+            x: s.congested_pct, y: s.jti,
+            r: 4 + Math.sqrt(s.vehicles / maxVeh) * 14, s: s
+          })),
+          backgroundColor: rgba(palette[i % palette.length], 0.7),
+          borderColor: palette[i % palette.length], borderWidth: 1
+        }))
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom',
+                    labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, font: { size: 11 } } },
+          tooltip: { callbacks: { label: c => {
+            const s = c.raw.s;
+            return [s.code + ' · ' + s.road, s.city,
+                    'JTI ' + s.jti.toFixed(3),
+                    s.congested_pct.toFixed(1) + '% congested',
+                    '£' + s.cost_m.toFixed(2) + 'm / year'];
+          } } }
+        },
+        scales: {
+          x: { beginAtZero: true,
+               title: { display: true, text: 'Share of hours congested (%)', color: C.ink3 },
+               grid: { color: C.grid, drawBorder: false }, ticks: { color: C.ink2 } },
+          y: { min: 1.0, max: Math.ceil(maxJti * 20) / 20,
+               title: { display: true, text: 'Journey Time Index', color: C.ink3 },
+               grid: { color: C.grid, drawBorder: false }, ticks: { color: C.ink2 } }
+        }
+      }
+    });
+  }
+
+  [fCity, fRoad, fSet].forEach(el => el.addEventListener('change', render));
+  q.addEventListener('input', render);
+  makeSortable('tSites', rows, render);
+  render();
+})();
+</script>
+
+</body>
+</html>

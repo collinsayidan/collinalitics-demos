@@ -1,0 +1,64 @@
+{
+  "name": "Transport Scotland ITS Analytics",
+  "dataColors": [
+    "#00539F", "#0F8B8D", "#EF6C00", "#C62828", "#5E35B1",
+    "#2E7D32", "#F9A825", "#455A64", "#8E24AA", "#00838F",
+    "#6D4C41", "#546E7A"
+  ],
+  "foreground": "#1B1F23",
+  "foregroundNeutralSecondary": "#4A5560",
+  "foregroundNeutralTertiary": "#8A94A0",
+  "background": "#FFFFFF",
+  "backgroundLight": "#F4F6F8",
+  "backgroundNeutral": "#E3E8ED",
+  "tableAccent": "#00539F",
+  "good": "#2E7D32",
+  "neutral": "#F9A825",
+  "bad": "#C62828",
+  "maximum": "#C62828",
+  "center": "#F9A825",
+  "minimum": "#2E7D32",
+  "textClasses": {
+    "title":       { "fontSize": 16, "fontFace": "Segoe UI Semibold", "color": "#1B1F23" },
+    "largeTitle":  { "fontSize": 22, "fontFace": "Segoe UI Semibold", "color": "#00539F" },
+    "header":      { "fontSize": 12, "fontFace": "Segoe UI Semibold", "color": "#4A5560" },
+    "label":       { "fontSize": 10, "fontFace": "Segoe UI",          "color": "#4A5560" },
+    "callout":     { "fontSize": 34, "fontFace": "Segoe UI Light",    "color": "#00539F" }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background":  [{ "show": true, "color": { "solid": { "color": "#FFFFFF" } }, "transparency": 0 }],
+        "border":      [{ "show": true, "color": { "solid": { "color": "#E3E8ED" } }, "radius": 6 }],
+        "dropShadow":  [{ "show": true, "preset": "Subtle" }],
+        "visualHeader":[{ "show": true, "background": { "solid": { "color": "#FFFFFF" } } }],
+        "title": [{ "show": true, "fontSize": 12, "fontColor": { "solid": { "color": "#1B1F23" } },
+                    "fontFamily": "Segoe UI Semibold", "alignment": "left" }],
+        "categoryAxis": [{ "gridlineShow": false, "labelColor": { "solid": { "color": "#4A5560" } }, "fontSize": 10 }],
+        "valueAxis":    [{ "gridlineColor": { "solid": { "color": "#EDF1F4" } }, "labelColor": { "solid": { "color": "#4A5560" } }, "fontSize": 10 }],
+        "legend":       [{ "position": "TopCenter", "showTitle": false, "fontSize": 10 }]
+      }
+    },
+    "card": {
+      "*": {
+        "labels":         [{ "fontSize": 32, "color": { "solid": { "color": "#00539F" } }, "fontFamily": "Segoe UI Light" }],
+        "categoryLabels": [{ "fontSize": 11, "color": { "solid": { "color": "#4A5560" } } }]
+      }
+    },
+    "kpi": { "*": { "trendline": [{ "show": true }] } },
+    "slicer": {
+      "*": {
+        "header": [{ "show": true, "fontColor": { "solid": { "color": "#00539F" } }, "fontSize": 10 }],
+        "items":  [{ "fontColor": { "solid": { "color": "#1B1F23" } }, "fontSize": 10 }]
+      }
+    },
+    "tableEx": {
+      "*": {
+        "columnHeaders": [{ "fontColor": { "solid": { "color": "#FFFFFF" } },
+                            "backColor":  { "solid": { "color": "#00539F" } }, "fontSize": 10 }],
+        "values": [{ "fontSize": 10, "backColorSecondary": { "solid": { "color": "#F4F6F8" } } }]
+      }
+    },
+    "page": { "*": { "background": [{ "color": { "solid": { "color": "#F4F6F8" } }, "transparency": 0 }] } }
+  }
+}

@@ -1,0 +1,37 @@
+collision_risk_band,band_order,corridor,operating_unit,scored_hours,collisions,mean_risk_score,share_of_hours_pct,share_of_collisions_pct,lift,cumulative_hours_pct,cumulative_capture_pct
+Priority,1,Ayrshire,South West,467,14,0.5431455267204297,9.74,63.64,6.53,9.74,63.64
+Elevated,2,Ayrshire,South West,991,2,0.31417896974101545,20.68,9.09,0.44,30.42,72.73
+Moderate,3,Ayrshire,South West,1652,2,0.18643352922076073,34.47,9.09,0.26,64.89,81.82
+Low,4,Ayrshire,South West,1683,4,0.10227895135971873,35.11,18.18,0.52,100.0,100.0
+Priority,1,Anglo-Scottish Freight,South West,169,16,0.6089902829074227,2.72,61.54,22.59,2.72,61.54
+Elevated,2,Anglo-Scottish Freight,South West,719,2,0.3000569612693748,11.59,7.69,0.66,14.31,69.23
+Moderate,3,Anglo-Scottish Freight,South West,2066,3,0.18249578073287256,33.3,11.54,0.35,47.61,80.77
+Low,4,Anglo-Scottish Freight,South West,3250,5,0.0992871067139438,52.39,19.23,0.37,100.0,100.0
+Priority,1,East Coast Anglo-Scottish,South East,249,8,0.5397850938462142,5.19,50.0,9.64,5.19,50.0
+Elevated,2,East Coast Anglo-Scottish,South East,997,1,0.3133305815693362,20.78,6.25,0.3,25.96,56.25
+Moderate,3,East Coast Anglo-Scottish,South East,1646,5,0.18499618211202373,34.3,31.25,0.91,60.26,87.5
+Low,4,East Coast Anglo-Scottish,South East,1907,2,0.10058766887694832,39.74,12.5,0.31,100.0,100.0
+Priority,1,Central Belt Core,South West / South East,945,50,0.5572380323097893,4.88,70.42,14.44,4.88,70.42
+Elevated,2,Central Belt Core,South West / South East,2989,2,0.3088407155320978,15.42,2.82,0.18,20.3,73.24
+Moderate,3,Central Belt Core,South West / South East,5692,10,0.18167024737477905,29.37,14.08,0.48,49.67,87.32
+Low,4,Central Belt Core,South West / South East,9754,9,0.09609169460010723,50.33,12.68,0.25,100.0,100.0
+Priority,1,West Highland,North West,420,9,0.5153576952859609,8.65,52.94,6.12,8.65,52.94
+Elevated,2,West Highland,North West,1305,2,0.31695463531190216,26.89,11.76,0.44,35.54,64.71
+Moderate,3,West Highland,North West,1453,3,0.18854659742789281,29.93,17.65,0.59,65.47,82.35
+Low,4,West Highland,North West,1676,3,0.09830877362848194,34.53,17.65,0.51,100.0,100.0
+Priority,1,East Coast,South East / North East,1088,44,0.5633367839638154,5.26,62.86,11.94,5.26,62.86
+Elevated,2,East Coast,South East / North East,3141,7,0.30934786332204245,15.2,10.0,0.66,20.46,72.86
+Moderate,3,East Coast,South East / North East,6768,9,0.18207718493638228,32.75,12.86,0.39,53.22,85.71
+Low,4,East Coast,South East / North East,9668,10,0.09895788267192847,46.78,14.29,0.31,100.0,100.0
+Priority,1,North East Corridor,North East,495,26,0.5640164170604418,4.57,63.41,13.88,4.57,63.41
+Elevated,2,North East Corridor,North East,1550,2,0.3098666180298308,14.3,4.88,0.34,18.87,68.29
+Moderate,3,North East Corridor,North East,2992,5,0.1821415196449631,27.61,12.2,0.44,46.48,80.49
+Low,4,North East Corridor,North East,5800,8,0.10087849512606471,53.52,19.51,0.36,100.0,100.0
+Priority,1,Forth and Tay,South East,536,19,0.5568135635796467,5.2,59.38,11.42,5.2,59.38
+Elevated,2,Forth and Tay,South East,1359,3,0.308317976428556,13.18,9.38,0.71,18.38,68.75
+Moderate,3,Forth and Tay,South East,3044,1,0.1864299332796281,29.52,3.13,0.11,47.9,71.88
+Low,4,Forth and Tay,South East,5373,9,0.09768579794991035,52.1,28.13,0.54,100.0,100.0
+Priority,1,Highland Spine,North West,453,33,0.5956183126277345,3.06,67.35,22.01,3.06,67.35
+Elevated,2,Highland Spine,North West,1455,2,0.30354379299430195,9.83,4.08,0.42,12.88,71.43
+Moderate,3,Highland Spine,North West,3693,5,0.1806707917776234,24.94,10.2,0.41,37.82,81.63
+Low,4,Highland Spine,North West,9207,9,0.09509226228288548,62.18,18.37,0.3,100.0,100.0

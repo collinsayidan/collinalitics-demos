@@ -1,0 +1,222 @@
+// =============================================================================
+//  DASHBOARD 1  -  EXECUTIVE NETWORK PERFORMANCE
+//  Serving table : rpt_d1_executive   (792 rows, month x corridor x city x road)
+//  Home table    : _Measures          Display folder: D1 Executive
+// =============================================================================
+//
+//  THE WEIGHTING RULE - read this before writing any measure against a
+//  pre-aggregated serving table.
+//
+//  rpt_d1_executive stores mean_journey_time_index per group. Writing
+//  AVERAGE(rpt_d1_executive[mean_journey_time_index]) computes an average of
+//  averages, which silently weights a 12-observation road the same as a
+//  4,000-observation motorway. Every mean below is therefore re-weighted by
+//  observation_count, and every speed average is harmonic. Getting this wrong
+//  is the single most common error when moving from a fact to an aggregate.
+// =============================================================================
+
+
+// -----------------------------------------------------------------------------
+// Base
+// -----------------------------------------------------------------------------
+
+D1 Observations =
+SUM ( rpt_d1_executive[observation_count] )
+// format: #,##0
+
+D1 Sites =
+SUM ( rpt_d1_executive[site_count] )
+// format: #,##0
+// Only additive within a month; use [Sites Monitored] for a distinct count.
+
+
+// -----------------------------------------------------------------------------
+// Demand
+// -----------------------------------------------------------------------------
+
+D1 Total Vehicles =
+SUM ( rpt_d1_executive[total_vehicles] )
+// format: #,##0
+
+D1 Vehicle Km =
+SUM ( rpt_d1_executive[vehicle_km] )
+// format: #,##0,, "m"
+
+D1 HGV Share % =
+DIVIDE ( SUM ( rpt_d1_executive[total_hgv] ), [D1 Total Vehicles] )
+// format: 0.0%
+
+
+// -----------------------------------------------------------------------------
+// Performance  (correctly weighted)
+// -----------------------------------------------------------------------------
+
+D1 Journey Time Index =
+DIVIDE (
+    SUMX ( rpt_d1_executive,
+           rpt_d1_executive[mean_journey_time_index] * rpt_d1_executive[observation_count] ),
+    [D1 Observations]
+)
+// format: 0.000
+// Observation-weighted. Reconciles to [Journey Time Index] on the fact: 1.167.
+
+D1 Harmonic Mean Speed =
+DIVIDE (
+    [D1 Observations],
+    SUMX ( rpt_d1_executive,
+           DIVIDE ( rpt_d1_executive[observation_count],
+                    rpt_d1_executive[harmonic_mean_speed_kmh] ) )
+)
+// format: #,##0.0 "km/h"
+// Harmonic means combine by summing counts over harmonic means, not by averaging.
+
+D1 Congested Hours % =
+DIVIDE ( SUM ( rpt_d1_executive[congested_hours] ), [D1 Observations] )
+// format: 0.0%
+
+D1 Delay Vehicle Hours =
+SUM ( rpt_d1_executive[annualised_delay_vehicle_hours] )
+// format: #,##0,, "m"
+
+D1 JTI vs Target =
+[D1 Journey Time Index] - 1.15
+// format: +0.000;-0.000
+
+D1 Performance Status =
+SWITCH ( TRUE (),
+    [D1 Journey Time Index] <= 1.15, "🟢 Meeting target",
+    [D1 Journey Time Index] <= 1.25, "🟡 Above target",
+    "🔴 Materially above target"
+)
+
+
+// -----------------------------------------------------------------------------
+// Safety and environment headlines
+// -----------------------------------------------------------------------------
+
+D1 Collisions =
+SUM ( rpt_d1_executive[collisions] )
+// format: #,##0
+
+D1 Collisions Per 100m Vehicle Km =
+DIVIDE ( [D1 Collisions] * 100000000, [D1 Vehicle Km] )
+// format: 0.00
+
+D1 Annual CO2 Megatonnes =
+DIVIDE ( SUM ( rpt_d1_executive[annualised_co2_tonnes] ), 1000000 )
+// format: 0.00 "Mt"
+
+
+// -----------------------------------------------------------------------------
+// Economics  -  waterfall components, all on the ANNUALISED basis
+// -----------------------------------------------------------------------------
+
+D1 Annual Cost =
+SUM ( rpt_d1_executive[annualised_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+D1 Annual Delay Cost =
+SUM ( rpt_d1_executive[annualised_delay_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+D1 Annual Carbon Cost =
+SUM ( rpt_d1_executive[annualised_carbon_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+D1 Annual Collision Cost =
+SUM ( rpt_d1_executive[annualised_collision_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+D1 Annual Breakdown Cost =
+SUM ( rpt_d1_executive[annualised_breakdown_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+
+D1 Carbon Share % =
+DIVIDE ( [D1 Annual Carbon Cost], [D1 Annual Cost] )
+// format: 0.0%
+// Expected 44.3%. The headline that reframes the network as a carbon problem.
+
+D1 Cost Per Vehicle Km =
+DIVIDE ( SUM ( rpt_d1_executive[total_economic_cost_gbp] ), [D1 Vehicle Km] )
+// format: \£0.000
+// Observed basis on both sides - never divide an annualised numerator by an
+// observed denominator.
+
+
+// -----------------------------------------------------------------------------
+// Concentration  -  the "where do we spend" answer
+// -----------------------------------------------------------------------------
+
+D1 Top 10 Corridor Cost =
+VAR TopSet =
+    TOPN ( 10, ALLSELECTED ( dim_site[site_code] ),
+           CALCULATE ( [Annualised Economic Cost] ), DESC )
+RETURN CALCULATE ( [Annualised Economic Cost], TopSet )
+// format: \£#,##0,,.0 "m"
+// Site-level concentration must come from the star, not the serving table,
+// because rpt_d1_executive is aggregated above site grain.
+
+D1 Cost Concentration % =
+DIVIDE ( [D1 Top 10 Corridor Cost],
+         CALCULATE ( [Annualised Economic Cost], ALLSELECTED ( dim_site ) ) )
+// format: 0.0%
+// Expected 34.0%.
+
+
+// -----------------------------------------------------------------------------
+// Time intelligence  (serving table joins dim_date on year_month, so these use
+// a disconnected-safe pattern rather than SAMEPERIODLASTYEAR)
+// -----------------------------------------------------------------------------
+
+D1 Cost LY =
+CALCULATE ( [D1 Annual Cost],
+    FILTER ( ALL ( rpt_d1_executive[calendar_year] ),
+             rpt_d1_executive[calendar_year] = MAX ( rpt_d1_executive[calendar_year] ) - 1 ) )
+// format: \£#,##0,,.0 "m"
+
+D1 Cost Growth YoY =
+VAR Prior = [D1 Cost LY]
+RETURN IF ( NOT ISBLANK ( Prior ), [D1 Annual Cost] - Prior )
+// format: +\£#,##0,,.0 "m";-\£#,##0,,.0 "m"
+
+D1 JTI LY =
+CALCULATE ( [D1 Journey Time Index],
+    FILTER ( ALL ( rpt_d1_executive[calendar_year] ),
+             rpt_d1_executive[calendar_year] = MAX ( rpt_d1_executive[calendar_year] ) - 1 ) )
+// format: 0.000
+
+D1 JTI YoY % =
+DIVIDE ( [D1 Journey Time Index] - [D1 JTI LY], [D1 JTI LY] )
+// format: +0.0%;-0.0%
+
+
+// -----------------------------------------------------------------------------
+// Narrative
+// -----------------------------------------------------------------------------
+
+D1 Executive Headline =
+"The monitored network carries " & FORMAT ( [D1 Annual Cost], "\£#,##0,,.0" ) &
+"m of avoidable cost each year. Carbon is " & FORMAT ( [D1 Carbon Share %], "0%" ) &
+" of it - more than delay. Journey times are " &
+FORMAT ( [D1 JTI YoY %], "+0.0%;-0.0%" ) & " year on year, against traffic growth of " &
+FORMAT ( DIVIDE ( [D1 Total Vehicles] -
+    CALCULATE ( [D1 Total Vehicles], FILTER ( ALL ( rpt_d1_executive[calendar_year] ),
+        rpt_d1_executive[calendar_year] = MAX ( rpt_d1_executive[calendar_year] ) - 1 ) ),
+    CALCULATE ( [D1 Total Vehicles], FILTER ( ALL ( rpt_d1_executive[calendar_year] ),
+        rpt_d1_executive[calendar_year] = MAX ( rpt_d1_executive[calendar_year] ) - 1 ) ) ),
+    "+0.0%;-0.0%" ) & "."
+
+
+// =============================================================================
+//  SHARED LIBRARY MEASURES ALSO USED ON THIS PAGE
+//  (defined once in dax_measure_library.dax - do not redefine)
+//    [Journey Time Index]  [Annualised Economic Cost]  [Sites Monitored]
+//    [Conformance Rate %]  [DQ Status]  [Mean Collision Risk]
+//    [Selected Period Label]  [Sampling Disclaimer]  [Dynamic Title Network]
+//
+//  RECONCILIATION - these must agree, and a dbt test enforces the underlying data
+//    [D1 Observations]        = [Observations]              = 96,652
+//    [D1 Journey Time Index]  = [Journey Time Index]        = 1.167
+//    [D1 Annual Cost]         = [Annualised Economic Cost]  = \£1,353.3m
+//    [D1 Carbon Share %]      = [Carbon Share Of Cost %]    = 44.3%
+// =============================================================================

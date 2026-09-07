@@ -1,0 +1,25 @@
+time_key,hour_of_day,hour_label,hour_range_label,time_band,time_band_order,is_peak,peak_flag_label,peak_direction,operational_shift,is_daytime
+0,0,00:00,00:00 - 01:00,Night,1,0,Off peak,None,Night,0
+1,1,01:00,01:00 - 02:00,Night,1,0,Off peak,None,Night,0
+2,2,02:00,02:00 - 03:00,Night,1,0,Off peak,None,Night,0
+3,3,03:00,03:00 - 04:00,Night,1,0,Off peak,None,Night,0
+4,4,04:00,04:00 - 05:00,Night,1,0,Off peak,None,Night,0
+5,5,05:00,05:00 - 06:00,Early Morning,2,0,Off peak,None,Early,0
+6,6,06:00,06:00 - 07:00,Early Morning,2,0,Off peak,None,Early,1
+7,7,07:00,07:00 - 08:00,AM Peak,3,1,Peak,Inbound,Day,1
+8,8,08:00,08:00 - 09:00,AM Peak,3,1,Peak,Inbound,Day,1
+9,9,09:00,09:00 - 10:00,AM Shoulder,4,0,Off peak,Inbound,Day,1
+10,10,10:00,10:00 - 11:00,Inter Peak,5,0,Off peak,None,Day,1
+11,11,11:00,11:00 - 12:00,Inter Peak,5,0,Off peak,None,Day,1
+12,12,12:00,12:00 - 13:00,Inter Peak,5,0,Off peak,None,Day,1
+13,13,13:00,13:00 - 14:00,Inter Peak,5,0,Off peak,None,Day,1
+14,14,14:00,14:00 - 15:00,Inter Peak,5,0,Off peak,None,Day,1
+15,15,15:00,15:00 - 16:00,PM Shoulder,6,0,Off peak,Outbound,Day,1
+16,16,16:00,16:00 - 17:00,PM Peak,7,1,Peak,Outbound,Day,1
+17,17,17:00,17:00 - 18:00,PM Peak,7,1,Peak,Outbound,Day,1
+18,18,18:00,18:00 - 19:00,PM Peak,7,1,Peak,Outbound,Evening,1
+19,19,19:00,19:00 - 20:00,Evening,8,0,Off peak,None,Evening,1
+20,20,20:00,20:00 - 21:00,Evening,8,0,Off peak,None,Evening,0
+21,21,21:00,21:00 - 22:00,Evening,8,0,Off peak,None,Evening,0
+22,22,22:00,22:00 - 23:00,Night,1,0,Off peak,None,Night,0
+23,23,23:00,23:00 - 00:00,Night,1,0,Off peak,None,Night,0

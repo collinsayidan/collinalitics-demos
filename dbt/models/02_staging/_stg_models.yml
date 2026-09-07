@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: stg_its__observations
+    description: >
+      Conformed staging view over the bronze landing table. Applies naming
+      standards, explicit typing and derived measures required downstream
+      (free-flow journey time, delay per vehicle, implied segment length).
+    columns:
+      - name: record_id
+        description: Grain of the model. One row per source detector reading.
+        tests: [unique, not_null]
+      - name: observation_ts
+        description: Full-precision observation timestamp (date + time).
+        tests: [not_null]
+      - name: site_natural_key
+        description: Natural key of the physical detector site (road + coordinates).
+        tests: [not_null]
+      - name: city_name
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Glasgow','Edinburgh','Aberdeen','Dundee','Inverness','Stirling','Perth']
+      - name: road_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('ref_road_network')
+              field: road_id
+      - name: sensor_status
+        tests:
+          - accepted_values:
+              values: ['Active','Maintenance','Faulty']
+      - name: incident_type
+        tests:
+          - accepted_values:
+              values: ['None','Collision','Breakdown','Debris','Severe Weather','Vehicle Fire']
+      - name: event_type
+        tests:
+          - accepted_values:
+              values: ['None','Football Match','Concert','Festival','Marathon','Public Gathering']
+      - name: hour_of_day
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+              quote: false

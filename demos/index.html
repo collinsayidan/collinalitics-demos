@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Example work — Collinalitics Ltd</title>
+<meta name="description" content="Working demonstration platforms from Collinalitics Ltd. Built on synthetic data so you can explore the method without client confidentiality getting in the way.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="mast">
+  <div class="mast-inner">
+    <a class="brand" href="https://www.collinalitics.co.uk/">
+      <img src="LOGO.png" alt="Collinalitics Ltd">
+      <span class="divider">|</span>
+      <span class="proj">Example work</span>
+    </a>
+    <nav class="pages">
+      <a href="https://www.collinalitics.co.uk/">Main site</a>
+      <a href="https://www.collinalitics.co.uk/services">Services</a>
+      <a href="https://www.collinalitics.co.uk/pricing">Pricing</a>
+      <a href="https://www.collinalitics.co.uk/contact" class="cta">Book a free review</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<p class="eyebrow">Example work</p>
+<h1>Platforms you can actually click through.</h1>
+<p class="sub">
+  Every project below is a working analytics platform, not a screenshot. Filter it,
+  sort it, check the numbers against the stated method. They run on synthetic data
+  because we can't show you our clients' figures — which means you can explore them
+  freely, and see exactly how the work is put together.
+</p>
+
+<div class="projects" id="projects"></div>
+
+<h2>Why synthetic data</h2>
+<div class="grid g3">
+  <div class="card">
+    <h3 style="margin-top:0">Confidentiality holds</h3>
+    <p class="note" style="margin:0">
+      Client numbers stay with the client. Nothing here reveals anyone's commercial
+      position, so nothing has to be blurred, cropped or watered down.
+    </p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">The method is the point</h3>
+    <p class="note" style="margin:0">
+      Data modelling, KPI definitions, quality rules and economic valuation are
+      identical whether the numbers are real or generated. That is what you are
+      buying, and that is what these show.
+    </p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">You can stress-test it</h3>
+    <p class="note" style="margin:0">
+      Every assumption is written down on each project's method page, including the
+      limitations. Check our working — it's the fastest way to judge whether we'd be
+      useful to you.
+    </p>
+  </div>
+</div>
+
+<h2>How this applies to your data</h2>
+<div class="card">
+  <p class="note" style="margin-top:0">
+    The same approach fits far smaller datasets. Most of our work is a few thousand
+    rows in a handful of spreadsheets, not a hundred thousand sensor readings — but
+    the sequence is the same: agree what the numbers mean, model the data so it
+    refreshes without manual work, quantify what it costs or earns, and make the
+    quality visible rather than hiding it.
+  </p>
+  <p class="note" style="margin-bottom:0">
+    <a href="https://www.collinalitics.co.uk/contact"><strong>Book a free 30-minute data review →</strong></a>
+    No obligation. We look at your current setup and give you a plain-English
+    recommendation before any work begins.
+  </p>
+</div>
+
+<footer class="foot"><div class="inner">
+  <strong>Collinalitics Ltd</strong> ·
+  <a href="https://www.collinalitics.co.uk/">collinalitics.co.uk</a> ·
+  <a href="https://www.collinalitics.co.uk/services">Services</a> ·
+  <a href="https://www.collinalitics.co.uk/contact">Contact</a>
+  <br><br>
+  Registered in Scotland · Company No. SC874504 · Edinburgh, United Kingdom.
+  All projects on this site use synthetic demonstration data.
+</div></footer>
+
+</main>
+
+<script>
+/* ── Add a new project by adding one entry here. ──────────────────────────
+   Copy the whole object, change the fields, point `url` at the new folder. */
+
+const PROJECTS = [
+  {
+    title:   'Scotland ITS network performance',
+    sector:  'Transport · Public sector',
+    url:     'scotland-its/index.html',
+    blurb:   'A hundred thousand hourly sensor observations from 74 sites on the ' +
+             'Scottish strategic road network, taken from raw feed to board-level ' +
+             'economics — with the data quality layer left visible rather than hidden.',
+    stats:   [
+      { v: '£1,353.3m', k: 'Annual cost quantified' },
+      { v: '95.70%',    k: 'Records passing 12 rules' },
+      { v: '74',        k: 'Sites modelled' }
+    ],
+    tags:    ['Power BI', 'dbt', 'PostgreSQL', 'Python', 'Machine learning'],
+    live:    true
+  }
+
+  /* ── Next project goes here ───────────────────────────────────────────
+  ,{
+    title:  'Retail demand forecasting',
+    sector: 'Retail · SME',
+    url:    'retail-forecast/index.html',
+    blurb:  'One sentence on the problem, one on what the platform shows.',
+    stats:  [
+      { v: '00%', k: 'Headline metric' },
+      { v: '00',  k: 'Second metric' },
+      { v: '00',  k: 'Third metric' }
+    ],
+    tags:   ['Power BI', 'SQL'],
+    live:   true
+  }
+  ─────────────────────────────────────────────────────────────────────── */
+];
+
+document.getElementById('projects').innerHTML = PROJECTS.map(p =>
+  '<a class="project' + (p.live ? '' : ' soon') + '" ' +
+    (p.live ? 'href="' + p.url + '"' : '') + '>' +
+    '<div class="project-head">' +
+      '<span class="sector">' + p.sector + '</span>' +
+      (p.live ? '' : '<span class="badge">In build</span>') +
+    '</div>' +
+    '<h3>' + p.title + '</h3>' +
+    '<p class="blurb">' + p.blurb + '</p>' +
+    '<div class="project-stats">' +
+      p.stats.map(s => '<div><span class="v">' + s.v + '</span>' +
+                       '<span class="k">' + s.k + '</span></div>').join('') +
+    '</div>' +
+    '<div class="tags">' + p.tags.map(t => '<span>' + t + '</span>').join('') + '</div>' +
+    (p.live ? '<span class="go">Explore the platform &rarr;</span>' : '') +
+  '</a>'
+).join('');
+</script>
+
+</body>
+</html>

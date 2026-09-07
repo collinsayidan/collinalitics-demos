@@ -1,0 +1,7 @@
+incident_key,incident_type,incident_category,is_disruptive,is_reportable_casualty_event,response_owner,severity_rank
+1,None,No incident,0,0,Not applicable,0
+2,Collision,Collision,1,1,Police Scotland / Trunk Road Operating Company,4
+3,Breakdown,Non-collision,1,0,Trunk Road Operating Company,2
+4,Debris,Non-collision,1,0,Trunk Road Operating Company,2
+5,Severe Weather,Environmental,1,0,Traffic Scotland Control Centre,3
+6,Vehicle Fire,Non-collision,1,0,Scottish Fire and Rescue Service,4

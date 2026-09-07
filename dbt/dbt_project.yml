@@ -1,0 +1,61 @@
+name: 'its_scotland'
+version: '1.0.0'
+config-version: 2
+profile: 'its_scotland'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # ---- Source ----------------------------------------------------------
+  raw_csv_path: '../data/scotland_its_dataset.csv'
+
+  # ---- Analysis window (drives the survey expansion factor) -------------
+  period_start: '2023-01-01'
+  period_end:   '2025-12-31'
+  period_hours: 26304          # 1096 days x 24 h
+  period_years: 3.0
+
+  # ---- Congestion banding (Journey Time Index thresholds) --------------
+  jti_medium_threshold: 1.15
+  jti_high_threshold:   1.45
+  jti_severe_threshold: 2.00
+
+  # ---- Data quality tolerances ----------------------------------------
+  speed_tolerance_factor: 1.15   # speed > limit * factor => invalid
+  spike_multiple: 4.0            # flow > n x site-hour median => spike
+
+  # ---- ML scoring layer -------------------------------------------------
+  ml_output_path: '../data/ml'
+
+models:
+  its_scotland:
+    +persist_docs: {relation: true, columns: true}
+    01_bronze:
+      +materialized: table
+      +schema: bronze
+    02_staging:
+      +materialized: view
+      +schema: staging
+    03_intermediate:
+      +materialized: table
+      +schema: intermediate
+    04_marts:
+      +materialized: table
+      +schema: marts
+      core:
+        +tags: ['core','powerbi']
+      agg:
+        +tags: ['agg','powerbi']
+      ml:
+        +tags: ['ml','powerbi']
+
+seeds:
+  its_scotland:
+    +schema: reference
+    +quote_columns: false

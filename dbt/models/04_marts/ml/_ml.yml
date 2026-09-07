@@ -1,0 +1,26 @@
+version: 2
+models:
+  - name: fct_risk_score
+    description: Machine learning scoring fact, one row per clean observation.
+    columns:
+      - name: observation_id
+        tests: [unique, not_null]
+      - name: site_key
+        tests:
+          - relationships: {to: ref('dim_site'), field: site_key}
+      - name: collision_risk_band
+        tests:
+          - accepted_values: {values: ['Low','Moderate','Elevated','Priority']}
+      - name: predicted_congestion_level
+        tests:
+          - accepted_values: {values: ['Low','Medium','High','Severe']}
+      - name: collision_risk_score
+        tests: [not_null]
+  - name: dim_model_metric
+    columns:
+      - name: metric_key
+        tests: [unique, not_null]
+  - name: agg_site_risk_ranking
+    columns:
+      - name: site_key
+        tests: [unique, not_null]

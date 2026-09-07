@@ -1,0 +1,129 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: Conformed calendar dimension. Mark as the date table in Power BI.
+    columns:
+      - name: date_key
+        tests: [unique, not_null]
+      - name: full_date
+        tests: [unique, not_null]
+
+  - name: dim_time
+    columns:
+      - name: time_key
+        tests: [unique, not_null]
+      - name: time_band
+        tests:
+          - accepted_values:
+              values: ['Night','Early Morning','AM Peak','AM Shoulder','Inter Peak','PM Shoulder','PM Peak','Evening']
+
+  - name: dim_site
+    description: Detector site dimension, one row per physical sensor location.
+    columns:
+      - name: site_key
+        tests: [unique, not_null]
+      - name: site_natural_key
+        tests: [unique, not_null]
+      - name: road_id
+        tests:
+          - relationships: {to: ref('ref_road_network'), field: road_id}
+      - name: urbanisation_band
+        tests:
+          - accepted_values: {values: ['Urban Core','Suburban','Inter Urban']}
+
+  - name: dim_congestion
+    columns:
+      - name: congestion_key
+        tests: [unique, not_null]
+      - name: congestion_level
+        tests:
+          - unique
+          - accepted_values: {values: ['Low','Medium','High','Severe']}
+
+  - name: dim_incident
+    columns:
+      - name: incident_key
+        tests: [unique, not_null]
+      - name: incident_type
+        tests: [unique, not_null]
+
+  - name: dim_event
+    columns:
+      - name: event_key
+        tests: [unique, not_null]
+      - name: event_type
+        tests: [unique, not_null]
+
+  - name: dim_sensor_status
+    columns:
+      - name: sensor_status_key
+        tests: [unique, not_null]
+      - name: sensor_status
+        tests: [unique, not_null]
+
+  - name: dim_weather
+    columns:
+      - name: weather_key
+        tests: [unique, not_null]
+      - name: weather_severity_band
+        tests: [unique, not_null]
+
+  - name: fct_traffic_observation
+    description: >
+      Central fact table. Grain: one clean detector observation (site-hour).
+      All foreign keys are enforced by relationship tests.
+    columns:
+      - name: observation_id
+        tests: [unique, not_null]
+      - name: date_key
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_date'), field: date_key}
+      - name: time_key
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_time'), field: time_key}
+      - name: site_key
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_site'), field: site_key}
+      - name: congestion_key
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_congestion'), field: congestion_key}
+      - name: incident_key
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_incident'), field: incident_key}
+      - name: event_key
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_event'), field: event_key}
+      - name: sensor_status_key
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_sensor_status'), field: sensor_status_key}
+      - name: weather_key
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_weather'), field: weather_key}
+      - name: vehicle_count
+        tests:
+          - not_null
+      - name: journey_time_index
+        tests: [not_null]
+
+  - name: fct_data_quality
+    columns:
+      - name: observation_id
+        tests: [unique, not_null]
+      - name: dq_disposition
+        tests:
+          - accepted_values: {values: ['Accepted','Accepted with warning','Quarantined']}
+
+  - name: agg_network_daily
+    description: Daily aggregate; reconciles exactly to the fact table.
+  - name: agg_site_hour_profile
+  - name: agg_data_quality_daily
+  - name: agg_corridor_month

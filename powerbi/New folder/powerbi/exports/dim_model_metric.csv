@@ -1,0 +1,22 @@
+metric_key,model_name,model_version,data_split,metric_name,metric_value,note,training_rows,test_rows,trained_at,metric_family
+1,Collision Risk,v1.2.0,Baseline,PR AUC,0.0035639023180860296,positive class rate,64702,32268,2026-08-12 20:45:41.695742+01,PR AUC
+2,Collision Risk,v1.2.0,Test 2025,Capture at top 10%,0.6869565217391305,"",64702,32268,2026-08-12 20:45:41.695742+01,Capture
+3,Collision Risk,v1.2.0,Test 2025,Capture at top 20%,0.7391304347826086,"",64702,32268,2026-08-12 20:45:41.695742+01,Capture
+4,Collision Risk,v1.2.0,Test 2025,Capture at top 5%,0.6608695652173913,"",64702,32268,2026-08-12 20:45:41.695742+01,Capture
+5,Collision Risk,v1.2.0,Test 2025,Lift at top 10%,6.869139461877366,"",64702,32268,2026-08-12 20:45:41.695742+01,Lift
+6,Collision Risk,v1.2.0,Test 2025,Lift at top 20%,3.695423128225165,"",64702,32268,2026-08-12 20:45:41.695742+01,Lift
+7,Collision Risk,v1.2.0,Test 2025,Lift at top 5%,13.212477775981895,"",64702,32268,2026-08-12 20:45:41.695742+01,Lift
+8,Collision Risk,v1.2.0,Test 2025,PR AUC,0.22160828351398015,"",64702,32268,2026-08-12 20:45:41.695742+01,PR AUC
+9,Collision Risk,v1.2.0,Test 2025,ROC AUC,0.831954013351922,"",64702,32268,2026-08-12 20:45:41.695742+01,ROC AUC
+10,Congestion Forecast,v1.2.0,Baseline,Macro F1,0.20563228666824793,majority class,64702,32268,2026-08-12 20:45:41.695742+01,Macro F1
+11,Congestion Forecast,v1.2.0,Test 2025,Accuracy,0.8264224618817404,"",64702,32268,2026-08-12 20:45:41.695742+01,Accuracy
+12,Congestion Forecast,v1.2.0,Test 2025,Balanced Accuracy,0.7051359956181108,"",64702,32268,2026-08-12 20:45:41.695742+01,Balanced Accuracy
+13,Congestion Forecast,v1.2.0,Test 2025,Macro F1,0.672292264778336,"",64702,32268,2026-08-12 20:45:41.695742+01,Macro F1
+14,Congestion Forecast,v1.2.0,Test 2025,Precision - High,0.4784345047923323,"",64702,32268,2026-08-12 20:45:41.695742+01,Precision
+15,Congestion Forecast,v1.2.0,Test 2025,Precision - Low,0.9727676369018253,"",64702,32268,2026-08-12 20:45:41.695742+01,Precision
+16,Congestion Forecast,v1.2.0,Test 2025,Precision - Medium,0.6139225746268657,"",64702,32268,2026-08-12 20:45:41.695742+01,Precision
+17,Congestion Forecast,v1.2.0,Test 2025,Precision - Severe,0.5294117647058824,"",64702,32268,2026-08-12 20:45:41.695742+01,Precision
+18,Congestion Forecast,v1.2.0,Test 2025,Recall - High,0.5878312070657508,"",64702,32268,2026-08-12 20:45:41.695742+01,Recall
+19,Congestion Forecast,v1.2.0,Test 2025,Recall - Low,0.8747615456279668,"",64702,32268,2026-08-12 20:45:41.695742+01,Recall
+20,Congestion Forecast,v1.2.0,Test 2025,Recall - Medium,0.7667103538663171,"",64702,32268,2026-08-12 20:45:41.695742+01,Recall
+21,Congestion Forecast,v1.2.0,Test 2025,Recall - Severe,0.5912408759124088,"",64702,32268,2026-08-12 20:45:41.695742+01,Recall

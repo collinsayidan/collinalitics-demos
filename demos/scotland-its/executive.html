@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network performance — Scotland ITS — Collinalitics Ltd</title>
+<meta name="description" content="Demand, reliability and economic cost across the Scottish strategic road network. Synthetic demonstration data.">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<header class="mast">
+  <div class="mast-inner">
+    <a class="brand" href="../index.html">
+      <img src="../LOGO.png" alt="Collinalitics Ltd">
+      <span class="divider">|</span>
+      <span class="proj">Scotland ITS</span>
+    </a>
+    <nav class="pages">
+      <a href="../index.html">&larr; All work</a>
+      <a href="index.html">Overview</a>
+      <a href="executive.html" class="on">Network</a>
+      <a href="explore.html">Explore</a>
+      <a href="methodology.html">Method</a>
+      <a href="https://www.collinalitics.co.uk/contact" class="cta">Book a free review</a>
+    </nav>
+  </div>
+</header>
+
+<div class="synthetic">
+  <div class="inner">
+    <strong>Synthetic demonstration data</strong> — not Transport Scotland data.
+    <a href="methodology.html">Method and limitations →</a>
+  </div>
+</div>
+
+<main>
+
+<p class="eyebrow">Network performance</p>
+<h1>Where the network costs money</h1>
+<p class="sub">
+  Is the strategic road network performing, what is it costing, and where should
+  we spend? Filter by corridor or city to see any part of it on its own.
+</p>
+
+<div class="controls">
+  <select id="fCorridor"><option value="">All corridors</option></select>
+  <select id="fCity"><option value="">All cities</option></select>
+</div>
+
+<div class="kpis" id="kpis"></div>
+<p class="small" id="scope"></p>
+
+<h2>Demand against reliability</h2>
+<p class="note">
+  Vehicles observed each month against the Journey Time Index. Network-wide;
+  the corridor and city filters apply to the site-level panels below.
+</p>
+<div class="grid g2">
+  <div class="card"><div class="chartbox"><canvas id="cJti"></canvas></div></div>
+  <div class="card"><div class="chartbox"><canvas id="cVeh"></canvas></div></div>
+</div>
+
+<div class="finding">
+  Demand rises while reliability falls. Two lines diverging is the whole executive
+  argument: capacity is being consumed faster than it is being managed.
+</div>
+
+<h2>Cost by corridor</h2>
+<p class="note">Click any column heading to sort.</p>
+<div class="card" style="overflow-x:auto">
+  <table id="tCorr"><thead><tr>
+    <th data-key="corridor">Corridor</th>
+    <th class="num" data-key="sites">Sites</th>
+    <th class="num" data-key="jti">JTI</th>
+    <th class="num" data-key="cost_m">£m / year</th>
+    <th class="num" data-key="carbon_pct">Carbon share</th>
+  </tr></thead><tbody></tbody></table>
+</div>
+
+<h2>Sites by cost and risk</h2>
+<p class="note">
+  Each bubble is one of 74 sensor sites, positioned by longitude and latitude and
+  sized by annual economic cost. Upper right of the second chart is both expensive
+  and dangerous.
+</p>
+<div class="grid g2">
+  <div class="card"><div class="chartbox tall"><canvas id="cMap"></canvas></div></div>
+  <div class="card"><div class="chartbox tall"><canvas id="cRisk"></canvas></div></div>
+</div>
+
+<footer class="foot"><div class="inner">
+  <strong>Sampling note.</strong> The feed is a sample of site-hours, not a census.
+  Figures labelled annualised are expanded to a full-year equivalent using site-level
+  expansion factors; observed figures are not. The two are never mixed within a chart.
+  Synthetic demonstration data — see <a href="methodology.html">method and limitations</a>.
+  <br><br>
+  <a href="https://www.collinalitics.co.uk/">Collinalitics Ltd</a> ·
+  Registered in Scotland · Company No. SC874504 · Edinburgh, United Kingdom
+</div></footer>
+
+</main>
+
+<script src="data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="../app.js"></script>
+<script>
+(function () {
+  const rgba = (hex, a) => {
+    const h = hex.replace('#', '');
+    const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  };
+
+  const selC = document.getElementById('fCorridor');
+  const selT = document.getElementById('fCity');
+
+  [...new Set(ITS.sites.map(s => s.corridor))].sort()
+    .forEach(v => selC.add(new Option(v, v)));
+  [...new Set(ITS.sites.map(s => s.city))].sort()
+    .forEach(v => selT.add(new Option(v, v)));
+
+  const titleFont = { size: 14, weight: '600' };
+  let mapChart, riskChart;
+
+  function filtered() {
+    return ITS.sites.filter(s =>
+      (!selC.value || s.corridor === selC.value) &&
+      (!selT.value || s.city === selT.value));
+  }
+
+  function draw() {
+    const S = filtered();
+    const cost = S.reduce((a, s) => a + s.cost_m, 0);
+    const obs  = S.reduce((a, s) => a + s.obs, 0);
+    const coll = S.reduce((a, s) => a + s.collisions, 0);
+    const jti  = obs ? S.reduce((a, s) => a + s.jti * s.obs, 0) / obs : 0;
+    const cong = obs ? S.reduce((a, s) => a + s.congested_pct * s.obs, 0) / obs : 0;
+
+    kpiStrip('kpis', [
+      { lab: 'Sites in view',       val: fmt(S.length) },
+      { lab: 'Annual cost',         val: '£' + cost.toFixed(1) + 'm', foot: 'annualised' },
+      { lab: 'Journey Time Index',  val: jti.toFixed(3), foot: 'target 1.15', cls: jti > 1.15 ? 'bad' : 'good' },
+      { lab: 'Congested hours',     val: cong.toFixed(1) + '%', foot: 'high or severe' },
+      { lab: 'Collisions',          val: fmt(coll), foot: 'observed' }
+    ]);
+
+    document.getElementById('scope').textContent =
+      S.length === ITS.sites.length
+        ? 'All 74 sites.'
+        : 'Filtered to ' + S.length + ' of 74 sites — £' + cost.toFixed(1) +
+          'm of £' + ITS.headline.cost_m.toFixed(1) + 'm total.';
+
+    const maxCost = Math.max(...S.map(s => s.cost_m), 1);
+    const bubbles = S.map(s => ({
+      x: s.lon, y: s.lat, r: 4 + Math.sqrt(s.cost_m / maxCost) * 18, s: s
+    }));
+
+    if (mapChart) mapChart.destroy();
+    mapChart = new Chart(document.getElementById('cMap'), {
+      type: 'bubble',
+      data: { datasets: [{
+        data: bubbles,
+        backgroundColor: rgba(C.blue, 0.35),
+        borderColor: C.blue, borderWidth: 1
+      }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Economic cost by location', color: C.ink,
+                   align: 'start', font: titleFont },
+          tooltip: { callbacks: { label: c => {
+            const s = c.raw.s;
+            return [s.code + ' · ' + s.road, s.city, '£' + s.cost_m.toFixed(2) + 'm / year',
+                    'JTI ' + s.jti.toFixed(3)];
+          } } }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Longitude', color: C.ink3 },
+               grid: { color: C.grid, drawBorder: false }, ticks: { color: C.ink2 } },
+          y: { title: { display: true, text: 'Latitude', color: C.ink3 },
+               grid: { color: C.grid, drawBorder: false }, ticks: { color: C.ink2 } }
+        }
+      }
+    });
+
+    const byCorr = {};
+    S.forEach(s => (byCorr[s.corridor] = byCorr[s.corridor] || []).push(s));
+    const palette = [C.blue, C.teal, C.orange, C.green, C.amber, C.red, C.ink2, '#5E35B1', '#00838F'];
+
+    if (riskChart) riskChart.destroy();
+    riskChart = new Chart(document.getElementById('cRisk'), {
+      type: 'scatter',
+      data: {
+        datasets: Object.keys(byCorr).sort().map((k, i) => ({
+          label: k,
+          data: byCorr[k].map(s => ({ x: s.risk, y: s.cost_m, s: s })),
+          backgroundColor: palette[i % palette.length],
+          pointRadius: 5, pointHoverRadius: 7
+        }))
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom',
+                    labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, font: { size: 11 } } },
+          title: { display: true, text: 'Cost against collision risk', color: C.ink,
+                   align: 'start', font: titleFont },
+          tooltip: { callbacks: { label: c => {
+            const s = c.raw.s;
+            return [s.code + ' · ' + s.road, '£' + s.cost_m.toFixed(2) + 'm / year',
+                    'risk ' + s.risk.toFixed(4)];
+          } } }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Mean collision risk', color: C.ink3 },
+               grid: { color: C.grid, drawBorder: false }, ticks: { color: C.ink2 } },
+          y: { beginAtZero: true, title: { display: true, text: 'Annual cost (£m)', color: C.ink3 },
+               grid: { color: C.grid, drawBorder: false }, ticks: { color: C.ink2 } }
+        }
+      }
+    });
+  }
+
+  const m = ITS.monthly;
+  new Chart(document.getElementById('cJti'), {
+    type: 'line',
+    data: { labels: m.map(d => d.lbl), datasets: [{
+      data: m.map(d => d.jti), borderColor: C.blue, backgroundColor: rgba(C.blue, 0.08),
+      fill: true, tension: 0.3, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
+    }] },
+    options: Object.assign(lineOpts('Journey Time Index', 1.0, 1.4), {
+      plugins: { legend: { display: false },
+        title: { display: true, text: 'Reliability over time', color: C.ink,
+                 align: 'start', font: titleFont } }
+    })
+  });
+
+  new Chart(document.getElementById('cVeh'), {
+    type: 'bar',
+    data: { labels: m.map(d => d.lbl), datasets: [{
+      data: m.map(d => d.vehicles), backgroundColor: C.teal, borderRadius: 3
+    }] },
+    options: Object.assign(barOpts('Vehicles observed'), {
+      plugins: { legend: { display: false },
+        title: { display: true, text: 'Demand over time', color: C.ink,
+                 align: 'start', font: titleFont } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: C.ink2, maxRotation: 0, autoSkipPadding: 16 } },
+        y: { beginAtZero: true, title: { display: true, text: 'Vehicles observed', color: C.ink3 },
+             grid: { color: C.grid, drawBorder: false }, ticks: { color: C.ink2 } }
+      }
+    })
+  });
+
+  const siteCount = {};
+  ITS.sites.forEach(s => siteCount[s.corridor] = (siteCount[s.corridor] || 0) + 1);
+  const corr = ITS.corridors.map(d => Object.assign({}, d, { sites: siteCount[d.corridor] || 0 }));
+  const tb = document.querySelector('#tCorr tbody');
+  const maxC = Math.max(...corr.map(d => d.cost_m));
+
+  function renderCorr() {
+    tb.innerHTML = corr.map(d =>
+      '<tr><td>' + d.corridor + '</td>' +
+      '<td class="num">' + d.sites + '</td>' +
+      '<td class="num">' + d.jti.toFixed(3) + '</td>' +
+      '<td class="num">' + d.cost_m.toFixed(1) +
+        '<span class="bar" style="width:' + (d.cost_m / maxC * 46).toFixed(0) + 'px"></span></td>' +
+      '<td class="num">' + d.carbon_pct.toFixed(0) + '%</td></tr>'
+    ).join('');
+  }
+  renderCorr();
+  makeSortable('tCorr', corr, renderCorr);
+
+  selC.addEventListener('change', draw);
+  selT.addEventListener('change', draw);
+  draw();
+})();
+</script>
+
+</body>
+</html>

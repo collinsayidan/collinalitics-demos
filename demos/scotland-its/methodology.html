@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Method and limitations — Scotland ITS — Collinalitics Ltd</title>
+<meta name="description" content="How the Collinalitics Scotland ITS demonstration platform was built, what it can support, and what it cannot.">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<header class="mast">
+  <div class="mast-inner">
+    <a class="brand" href="../index.html">
+      <img src="../LOGO.png" alt="Collinalitics Ltd">
+      <span class="divider">|</span>
+      <span class="proj">Scotland ITS</span>
+    </a>
+    <nav class="pages">
+      <a href="../index.html">&larr; All work</a>
+      <a href="index.html">Overview</a>
+      <a href="executive.html">Network</a>
+      <a href="explore.html">Explore</a>
+      <a href="methodology.html" class="on">Method</a>
+      <a href="https://www.collinalitics.co.uk/contact" class="cta">Book a free review</a>
+    </nav>
+  </div>
+</header>
+
+<div class="synthetic">
+  <div class="inner">
+    <strong>Synthetic demonstration data</strong> — not Transport Scotland data.
+  </div>
+</div>
+
+<main>
+
+<p class="eyebrow">How we built it</p>
+<h1>Method, sources and limitations</h1>
+<p class="sub">
+  What this platform can support, what it cannot, and every assumption behind the
+  numbers on the other three pages.
+</p>
+
+<div class="grid g2">
+
+  <div class="card">
+    <h3 style="margin-top:0">What this is</h3>
+    <p class="note">
+      A demonstration analytics platform built by Collinalitics Ltd to show how we take
+      a raw sensor feed through to board-level economics. It uses a synthetic dataset
+      because client data is confidential.
+    </p>
+    <h3>What this is not</h3>
+    <p class="note">
+      This is <strong>not</strong> Transport Scotland data. Collinalitics Ltd has no
+      affiliation with, commission from, or endorsement by Transport Scotland, its
+      operating companies, or any other public body. The road identifiers, city names,
+      geography and appraisal values are real and publicly sourced.
+      <strong>Every traffic measurement is generated.</strong> No figure on this site
+      describes an actual road, and nothing here should inform a real investment,
+      operational or policy decision.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">The pipeline</h3>
+    <dl class="kv">
+      <dt>Generation</dt><dd>Python, seeded and reproducible</dd>
+      <dt>Warehouse</dt><dd>dbt + DuckDB — 33 models, bronze to marts</dd>
+      <dt>Storage</dt><dd>PostgreSQL — 8 dimensions, 3 facts, 5 aggregates</dd>
+      <dt>Quality</dt><dd>120 automated tests, 12 rules with dispositions</dd>
+      <dt>ML</dt><dd>scikit-learn, gradient boosting, temporal hold-out</dd>
+      <dt>Internal BI</dt><dd>Power BI — 232 measures over one model</dd>
+      <dt>This site</dt><dd>Static HTML, no framework, no server</dd>
+    </dl>
+  </div>
+
+</div>
+
+<h2>The data</h2>
+<p class="note">
+  100,000 hourly observations across 74 sensor sites on 9 roads — M8, M74, M77, M90,
+  A9, A90, A82, A1, A96 — serving 7 cities, January 2023 to December 2025.
+</p>
+<div class="card">
+  <p class="note" style="margin-top:0">The generator is not a random-number exercise. It models:</p>
+  <ul class="note">
+    <li><strong>Demand</strong> by site, hour, day type and season, with morning and
+      evening peaks and a weekday/weekend split that shifts commuter volume into leisure volume.</li>
+    <li><strong>Speed</strong> through a Bureau of Public Roads curve,
+      JTI = 1 + 0.52·(v/c)<sup>2.9</sup>, so speed falls as volume approaches capacity
+      rather than by assignment.</li>
+    <li><strong>Weather</strong> on per-city climatology, with winter visibility loss and
+      rainfall feeding through to both congestion and collision probability.</li>
+    <li><strong>Disruption</strong> from collisions, lane closures, roadworks and planned
+      events, each with its own effect on journey time.</li>
+    <li><strong>Sensor behaviour</strong>, including seven classes of fault seeded at 2–5%
+      of records: dropouts, stuck readings, implausible speeds, missing values, duplicate
+      timestamps and extreme spikes.</li>
+  </ul>
+  <p class="note" style="margin-bottom:0">
+    The faults are deliberate. A platform that only works on clean data is not a platform.
+  </p>
+</div>
+
+<h2>Data quality</h2>
+<p class="note">
+  Of 100,000 raw records, <strong>96,652 (95.70%)</strong> pass all twelve rules and enter
+  the analytical layer. The remainder are quarantined, imputed or flagged according to a
+  documented disposition per rule — never silently dropped.
+</p>
+<div class="card">
+  <h3 style="margin-top:0">A bug the pipeline caught on itself</h3>
+  <p class="note" style="margin-bottom:0">
+    During build, the reconciliation test found 318 records carrying a null vehicle-class
+    count. Their totals were intact but their cost components were null, which excluded them
+    from component sums while leaving them in the row count — so the parts stopped adding up
+    to the whole. Two things had let it through: the quality rule checked only the total, not
+    the five class counts; and the reconciliation test compared with <code>&lt;&gt;</code>,
+    which is never true against a null. Both were fixed and every figure on this site is
+    post-fix. We mention it because a data platform that has never caught anything has not
+    been tested.
+  </p>
+</div>
+
+<h2>Economic values</h2>
+<div class="card" style="overflow-x:auto">
+  <table>
+    <thead><tr><th>Item</th><th>Source</th><th class="num">Value</th></tr></thead>
+    <tbody>
+      <tr><td>Value of time</td><td>DfT TAG data book</td><td class="num">By journey purpose</td></tr>
+      <tr><td>Fatal casualty</td><td>DfT RAS4001</td><td class="num">£2,411,659</td></tr>
+      <tr><td>Serious casualty</td><td>DfT RAS4001</td><td class="num">£271,003</td></tr>
+      <tr><td>Slight casualty</td><td>DfT RAS4001</td><td class="num">£20,892</td></tr>
+      <tr><td>Carbon</td><td>DESNZ central non-traded, 2022 prices</td><td class="num">£273 / tCO₂e (±50%)</td></tr>
+    </tbody>
+  </table>
+</div>
+<p class="note">
+  The carbon value carries a wide official sensitivity range, and carbon is the largest
+  cost component here — so the headline is correspondingly sensitive. At the low bound the
+  annual figure falls to roughly <strong>£1.05bn</strong>; at the high bound it rises to
+  about <strong>£1.65bn</strong> against a £1,353.3m central estimate. We state this rather
+  than presenting a single number as precise. The finding that carbon exceeds delay survives
+  at the central and high values, but not at the low one.
+</p>
+
+<h2>Sampling and annualisation</h2>
+<p class="note">
+  The feed represents a sample of site-hours rather than a continuous census. Each site
+  carries an expansion factor of <code>period_hours ÷ clean_observations</code>, and an
+  annualisation factor dividing that by the period length in years.
+  <strong>Observed</strong> figures describe what the sensors recorded;
+  <strong>annualised</strong> figures are grossed to full-year equivalents. Mixing the two
+  produces nonsense, so they are never combined within a chart, and every monetary visual
+  states which it shows.
+</p>
+
+<h2>Known limitations</h2>
+<div class="card">
+  <ol class="lim note">
+    <li><strong>Synthetic data.</strong> Relationships are as modelled, so the analysis
+      validates the method, not any claim about Scotland's roads.</li>
+    <li><strong>Carbon sensitivity.</strong> The headline is dominated by a value with a
+      ±50% official range.</li>
+    <li><strong>No origin–destination data.</strong> Site-level counts cannot support
+      routing or diversion analysis.</li>
+    <li><strong>Speed is space-mean.</strong> Harmonic means are used where appropriate;
+      the arithmetic mean of 88.7 km/h overstates the correct space-mean speed of
+      82.7 km/h, and the distinction is preserved through the model.</li>
+    <li><strong>The risk model forecasts rather than fits.</strong> Realised flow and speed
+      are deliberately excluded from the features, so it predicts collision risk from
+      conditions known in advance. This costs accuracy and buys operational usefulness. On
+      synthetic data its 63.7% capture in the top 5% of hours is an upper bound; expect
+      materially lower performance against live STATS19-linked data.</li>
+    <li><strong>Segments treated independently.</strong> These are corridor-monitoring
+      totals, not a de-duplicated national inventory.</li>
+    <li><strong>Static build.</strong> The site reflects the last pipeline run, which is
+      appropriate for a fixed historical dataset.</li>
+  </ol>
+</div>
+
+<h2>Want this for your own data?</h2>
+<div class="card">
+  <p class="note" style="margin-top:0">
+    This is the same approach we apply to client work: agree the definitions, model the
+    data properly, quantify what it means in money, and show the quality layer rather
+    than hiding it. We can't show you a client's figures — so we built this instead.
+  </p>
+  <p class="note" style="margin-bottom:0">
+    <a href="https://www.collinalitics.co.uk/contact"><strong>Book a free 30-minute data review →</strong></a>
+  </p>
+</div>
+
+<footer class="foot"><div class="inner">
+  <strong>Collinalitics Ltd</strong> ·
+  <a href="https://www.collinalitics.co.uk/">collinalitics.co.uk</a> ·
+  <a href="https://www.collinalitics.co.uk/contact">Contact</a>
+  <br><br>
+  Registered in Scotland · Company No. SC874504 · Edinburgh, United Kingdom.
+  Synthetic demonstration data throughout.
+</div></footer>
+
+</main>
+</body>
+</html>

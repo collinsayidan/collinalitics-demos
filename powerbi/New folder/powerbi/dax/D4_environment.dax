@@ -1,0 +1,193 @@
+// =============================================================================
+//  DASHBOARD 4  -  ENVIRONMENT AND NET ZERO
+//  Serving tables : rpt_d4_environment_monthly (1,548 rows, month x corridor x
+//                                               road type x urbanisation band)
+//                   rpt_d4_aqi_matrix          (12,090 rows, hour x month x corridor)
+//  Display folder : D4 Environment
+// =============================================================================
+//  The class decomposition in the serving table is allocated pro rata against
+//  the fact total, so the five class measures always sum to [D4 CO2 Tonnes].
+//  A dbt test enforces this to within 1 per cent.
+// =============================================================================
+
+
+// -----------------------------------------------------------------------------
+// Emissions
+// -----------------------------------------------------------------------------
+
+D4 Observations =
+SUM ( rpt_d4_environment_monthly[observation_count] )
+// format: #,##0
+
+D4 CO2 Tonnes =
+SUM ( rpt_d4_environment_monthly[co2_tonnes] )
+// format: #,##0
+// Observed basis - the tonnage actually measured in the sampled hours.
+
+D4 Annual CO2 Tonnes =
+SUM ( rpt_d4_environment_monthly[annualised_co2_tonnes] )
+// format: #,##0
+
+D4 Annual CO2 Megatonnes =
+DIVIDE ( [D4 Annual CO2 Tonnes], 1000000 )
+// format: 0.00 "Mt"
+
+D4 CO2 Car =
+SUM ( rpt_d4_environment_monthly[co2_tonnes_car] )
+// format: #,##0
+
+D4 CO2 Van =
+SUM ( rpt_d4_environment_monthly[co2_tonnes_van] )
+// format: #,##0
+
+D4 CO2 HGV =
+SUM ( rpt_d4_environment_monthly[co2_tonnes_hgv] )
+// format: #,##0
+
+D4 CO2 Bus =
+SUM ( rpt_d4_environment_monthly[co2_tonnes_bus] )
+// format: #,##0
+
+D4 CO2 Motorcycle =
+SUM ( rpt_d4_environment_monthly[co2_tonnes_motorcycle] )
+// format: #,##0
+
+D4 Freight CO2 Share % =
+DIVIDE ( [D4 CO2 HGV] + [D4 CO2 Van], [D4 CO2 Tonnes] )
+// format: 0.0%
+// Expected around 39.5%, against a freight share of vehicles near 20%. The gap
+// is why decarbonisation value concentrates on the M74 and A9 rather than on
+// urban commuter routes.
+
+D4 Freight CO2 Disproportion =
+VAR FreightVehicleShare =
+    DIVIDE ( SUM ( rpt_d1_executive[total_hgv] ), SUM ( rpt_d1_executive[total_vehicles] ) )
+RETURN DIVIDE ( [D4 Freight CO2 Share %], FreightVehicleShare )
+// format: 0.0"x"
+
+
+// -----------------------------------------------------------------------------
+// Intensity  -  efficiency, not just volume
+// -----------------------------------------------------------------------------
+
+D4 Vehicle Km =
+SUM ( rpt_d4_environment_monthly[vehicle_km] )
+// format: #,##0,, "m"
+
+D4 CO2 Per Vehicle Km =
+DIVIDE ( [D4 CO2 Tonnes] * 1000, [D4 Vehicle Km] )
+// format: 0.000 "kg/veh-km"
+// Volume and intensity tell different policy stories. Bookmark 4.9 toggles
+// between [D4 CO2 Tonnes] and this measure for exactly that reason.
+
+D4 Congestion Emissions Penalty =
+VAR FreeFlowing =
+    CALCULATE ( [D4 CO2 Per Vehicle Km],
+                rpt_d4_environment_monthly[mean_journey_time_index] <= 1.15 )
+VAR Congested =
+    CALCULATE ( [D4 CO2 Per Vehicle Km],
+                rpt_d4_environment_monthly[mean_journey_time_index] > 1.45 )
+RETURN DIVIDE ( Congested - FreeFlowing, FreeFlowing )
+// format: +0.0%;-0.0%
+// The emissions cost of poor network performance, isolated from traffic volume.
+
+
+// -----------------------------------------------------------------------------
+// Carbon value
+// -----------------------------------------------------------------------------
+
+D4 Annual Carbon Cost =
+SUM ( rpt_d4_environment_monthly[annualised_carbon_cost_gbp] )
+// format: \£#,##0,,.0 "m"
+// At the DESNZ central non-traded value of \£273/tCO2e (2022 prices).
+
+D4 Carbon Cost Low Sensitivity =
+[D4 Annual Carbon Cost] * 0.5
+// format: \£#,##0,,.0 "m"
+
+D4 Carbon Cost High Sensitivity =
+[D4 Annual Carbon Cost] * 1.5
+// format: \£#,##0,,.0 "m"
+// DESNZ publishes a +/-50% sensitivity range. Show it: a single point estimate
+// on a carbon figure overstates the precision of the underlying valuation.
+
+D4 Carbon Sensitivity Statement =
+"Central " & FORMAT ( [D4 Annual Carbon Cost], "\£#,##0,,.0" ) & "m, range " &
+FORMAT ( [D4 Carbon Cost Low Sensitivity], "\£#,##0,,.0" ) & "m to " &
+FORMAT ( [D4 Carbon Cost High Sensitivity], "\£#,##0,,.0" ) & "m (DESNZ +/-50%)."
+
+
+// -----------------------------------------------------------------------------
+// Air quality  (visual 4.12  -  hour x month heat map)
+// -----------------------------------------------------------------------------
+
+D4 AQI Observations =
+SUM ( rpt_d4_aqi_matrix[observation_count] )
+// format: #,##0
+
+D4 Mean AQI =
+DIVIDE (
+    SUMX ( rpt_d4_aqi_matrix,
+           rpt_d4_aqi_matrix[mean_air_quality_index] * rpt_d4_aqi_matrix[observation_count] ),
+    [D4 AQI Observations]
+)
+// format: #,##0.0
+
+D4 Wind Normalised AQI =
+DIVIDE (
+    SUMX ( rpt_d4_aqi_matrix,
+           rpt_d4_aqi_matrix[wind_normalised_aqi] * rpt_d4_aqi_matrix[observation_count] ),
+    [D4 AQI Observations]
+)
+// format: #,##0.0
+// Wind is the dominant meteorological control on roadside AQI (r = -0.49).
+// Raw AQI cannot be compared between sites or seasons without normalising for
+// dispersion - a calm day in Glasgow and a breezy day in Aberdeen are not
+// measuring the same thing.
+
+D4 AQI Exceedance Hours =
+SUM ( rpt_d4_aqi_matrix[aqi_exceedance_hours] )
+// format: #,##0
+
+D4 AQI Exceedance % =
+DIVIDE ( [D4 AQI Exceedance Hours], [D4 AQI Observations] )
+// format: 0.00%
+
+D4 Mean Wind Speed =
+DIVIDE (
+    SUMX ( rpt_d4_aqi_matrix,
+           rpt_d4_aqi_matrix[mean_wind_speed_kmh] * rpt_d4_aqi_matrix[observation_count] ),
+    [D4 AQI Observations]
+)
+// format: #,##0.0 "km/h"
+
+D4 Worst AQI Hour =
+VAR T =
+    TOPN ( 1, SUMMARIZE ( rpt_d4_aqi_matrix, rpt_d4_aqi_matrix[hour_label] ),
+           [D4 Mean AQI], DESC )
+RETURN CONCATENATEX ( T, rpt_d4_aqi_matrix[hour_label], ", " )
+
+D4 LEZ Candidate Sites =
+COUNTROWS (
+    FILTER ( VALUES ( dim_site[site_code] ),
+             CALCULATE ( [Average AQI] ) > 55 && CALCULATE ( [HGV Share %] ) > 0.08 )
+)
+// format: #,##0
+// Sites combining elevated roadside pollution with a high heavy-vehicle share:
+// the evidence base for Low Emission Zone or freight-routing intervention.
+
+
+// =============================================================================
+//  SHARED LIBRARY MEASURES ALSO USED ON THIS PAGE
+//    [Average AQI]  [HGV Share %]  [Annualised CO2 Megatonnes]
+//    [Selected Period Label]  [Sampling Disclaimer]
+//
+//  RECONCILIATION
+//    [D4 Observations]   = [Observations]                = 96,652
+//    [D4 CO2 Tonnes]     = [CO2 Tonnes]                  = 352,500 t observed
+//    Class measures sum to [D4 CO2 Tonnes] (dbt-enforced, 1% tolerance)
+//    [D4 Annual Carbon Cost] = [Annualised Carbon Cost]  = \£599.4m
+//
+//  PAGE FOOTNOTE (required): monitored segments are treated independently, so
+//  these are corridor-monitoring totals, not a de-duplicated national inventory.
+// =============================================================================

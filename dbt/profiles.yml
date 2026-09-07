@@ -1,0 +1,15 @@
+# Local development profile. The warehouse path is overridable so the same
+# project can target a scratch location in CI and a governed volume in prod.
+its_scotland:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('ITS_DUCKDB_PATH', '../data/its_warehouse.duckdb') }}"
+      threads: 4
+      settings:
+        memory_limit: '2GB'
+    prod:
+      type: duckdb
+      path: "{{ env_var('ITS_DUCKDB_PATH', '/warehouse/its/its_warehouse.duckdb') }}"
+      threads: 8

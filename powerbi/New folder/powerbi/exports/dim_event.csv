@@ -1,0 +1,7 @@
+event_key,event_type,event_category,is_planned_event,traffic_management_response,typical_demand_uplift
+1,None,No event,0,Not applicable,0.00
+2,Football Match,Sport,1,Stadium egress management,0.30
+3,Concert,Entertainment,1,Venue egress management,0.25
+4,Festival,Cultural,1,Sustained multi-week uplift,0.35
+5,Marathon,Sport,1,Road closures and diversion,0.20
+6,Public Gathering,Civic,1,Localised short duration,0.15
