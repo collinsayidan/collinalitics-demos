@@ -6,6 +6,7 @@
 <title>Network performance — Scotland ITS — Collinalitics Ltd</title>
 <meta name="description" content="Demand, reliability and economic cost across the Scottish strategic road network. Synthetic demonstration data.">
 <link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../editorial.css">
 </head>
 <body>
 
@@ -19,7 +20,7 @@
     <nav class="pages">
       <a href="../index.html">&larr; All work</a>
       <a href="index.html">Overview</a>
-      <a href="executive.html" class="on">Network</a>
+      <a href="executive.html" class="on" aria-current="page">Network</a>
       <a href="explore.html">Explore</a>
       <a href="methodology.html">Method</a>
       <a href="https://www.collinalitics.co.uk/contact" class="cta">Book a free review</a>
@@ -36,6 +37,8 @@
 
 <main>
 
+<div class="demo-overline"><span>COLLINALITICS / SCOTLAND ITS ANALYTICS</span><span>SYNTHETIC DATA / PORTFOLIO DEMONSTRATION</span></div>
+
 <p class="eyebrow">Network performance</p>
 <h1>Where the network costs money</h1>
 <p class="sub">
@@ -44,12 +47,13 @@
 </p>
 
 <div class="controls">
-  <select id="fCorridor"><option value="">All corridors</option></select>
-  <select id="fCity"><option value="">All cities</option></select>
+  <label class="sr-only" for="fCorridor">Corridor</label><select id="fCorridor" aria-label="Filter by corridor"><option value="">All corridors</option></select>
+  <label class="sr-only" for="fCity">City</label><select id="fCity" aria-label="Filter by city"><option value="">All cities</option></select>
+  <button type="button" class="demo-action ghost" id="resetNetworkFilters">Reset filters</button>
 </div>
 
 <div class="kpis" id="kpis"></div>
-<p class="small" id="scope"></p>
+<p class="small" id="scope" role="status" aria-live="polite"></p>
 
 <h2>Demand against reliability</h2>
 <p class="note">
@@ -57,8 +61,8 @@
   the corridor and city filters apply to the site-level panels below.
 </p>
 <div class="grid g2">
-  <div class="card"><div class="chartbox"><canvas id="cJti"></canvas></div></div>
-  <div class="card"><div class="chartbox"><canvas id="cVeh"></canvas></div></div>
+  <div class="card"><div class="chartbox"><canvas id="cJti" role="img" aria-label="Monthly vehicle demand and journey time index"></canvas></div></div>
+  <div class="card"><div class="chartbox"><canvas id="cVeh" role="img" aria-label="Monthly simulated vehicle volumes"></canvas></div></div>
 </div>
 
 <div class="finding">
@@ -85,8 +89,8 @@
   and dangerous.
 </p>
 <div class="grid g2">
-  <div class="card"><div class="chartbox tall"><canvas id="cMap"></canvas></div></div>
-  <div class="card"><div class="chartbox tall"><canvas id="cRisk"></canvas></div></div>
+  <div class="card"><div class="chartbox tall"><canvas id="cMap" role="img" aria-label="Synthetic sensor locations and economic costs"></canvas></div></div>
+  <div class="card"><div class="chartbox tall"><canvas id="cRisk" role="img" aria-label="Simulated site collision risk against annual cost"></canvas></div></div>
 </div>
 
 <footer class="foot"><div class="inner">
@@ -273,6 +277,10 @@
   renderCorr();
   makeSortable('tCorr', corr, renderCorr);
 
+  document.getElementById('resetNetworkFilters').addEventListener('click', () => {
+    selC.value = ''; selT.value = '';
+    draw(); selC.focus();
+  });
   selC.addEventListener('change', draw);
   selT.addEventListener('change', draw);
   draw();

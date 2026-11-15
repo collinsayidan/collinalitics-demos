@@ -15,6 +15,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../editorial.css">
 </head>
 <body>
 
@@ -27,7 +28,7 @@
     </a>
     <nav class="pages">
       <a href="../index.html">&larr; All work</a>
-      <a href="index.html" class="on">Overview</a>
+      <a href="index.html" class="on" aria-current="page">Overview</a>
       <a href="executive.html">Network</a>
       <a href="explore.html">Explore</a>
       <a href="methodology.html">Method</a>
@@ -48,6 +49,8 @@
 
 <main>
 
+<div class="demo-overline"><span>COLLINALITICS / SCOTLAND ITS ANALYTICS</span><span>SYNTHETIC DATA / PORTFOLIO DEMONSTRATION</span></div>
+
 <p class="eyebrow">Demonstration platform</p>
 <h1>From raw sensor feed to board-level economics.</h1>
 <p class="sub">
@@ -61,7 +64,7 @@
 <h2>What the network costs</h2>
 <p class="note">Annualised, £m per year.</p>
 <div class="card">
-  <div class="chartbox"><canvas id="cComponents"></canvas></div>
+  <div class="chartbox"><canvas id="cComponents" role="img" aria-label="Illustrative annual economic cost components in millions of pounds"></canvas></div>
 </div>
 
 <div class="finding" id="fCarbon"></div>
@@ -79,7 +82,7 @@
 <h2>When the cost happens</h2>
 <p class="note">Share of monitored site-hours against share of annual cost, by congestion level.</p>
 <div class="card">
-  <div class="chartbox"><canvas id="cCongestion"></canvas></div>
+  <div class="chartbox"><canvas id="cCongestion" role="img" aria-label="Illustrative annual cost by congestion severity"></canvas></div>
 </div>
 
 <div class="finding" id="fSevere"></div>
