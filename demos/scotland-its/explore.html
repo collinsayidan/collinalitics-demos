@@ -6,6 +6,7 @@
 <title>Explore the network — Scotland ITS — Collinalitics Ltd</title>
 <meta name="description" content="Filter and sort all 74 sensor sites by cost, congestion and collision risk. Synthetic demonstration data.">
 <link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../editorial.css">
 </head>
 <body>
 
@@ -20,7 +21,7 @@
       <a href="../index.html">&larr; All work</a>
       <a href="index.html">Overview</a>
       <a href="executive.html">Network</a>
-      <a href="explore.html" class="on">Explore</a>
+      <a href="explore.html" class="on" aria-current="page">Explore</a>
       <a href="methodology.html">Method</a>
       <a href="https://www.collinalitics.co.uk/contact" class="cta">Book a free review</a>
     </nav>
@@ -36,6 +37,8 @@
 
 <main>
 
+<div class="demo-overline"><span>COLLINALITICS / SCOTLAND ITS ANALYTICS</span><span>SYNTHETIC DATA / PORTFOLIO DEMONSTRATION</span></div>
+
 <p class="eyebrow">Site explorer</p>
 <h1>Every site, filterable</h1>
 <p class="sub">
@@ -44,13 +47,15 @@
 </p>
 
 <div class="controls">
-  <select id="fCity"><option value="">All cities</option></select>
-  <select id="fRoad"><option value="">All roads</option></select>
-  <select id="fSetting"><option value="">All settings</option></select>
+  <label class="sr-only" for="fCity">City</label><select id="fCity" aria-label="Filter by city"><option value="">All cities</option></select>
+  <label class="sr-only" for="fRoad">Road</label><select id="fRoad" aria-label="Filter by road"><option value="">All roads</option></select>
+  <label class="sr-only" for="fSetting">Setting</label><select id="fSetting" aria-label="Filter by setting"><option value="">All settings</option></select>
   <input type="search" id="q" placeholder="Search site or road" aria-label="Search sites">
+  <button type="button" class="demo-action ghost" id="resetFilters">Reset filters</button>
+  <button type="button" class="demo-action" id="exportCsv">Export filtered CSV ↓</button>
 </div>
 
-<p class="small" id="count"></p>
+<p class="small" id="count" role="status" aria-live="polite"></p>
 
 <div class="card" style="overflow-x:auto">
   <table id="tSites"><thead><tr>
@@ -70,7 +75,7 @@
 <p class="note">
   Bubble size is traffic volume, colour is corridor. Each bubble is one site.
 </p>
-<div class="card"><div class="chartbox tall"><canvas id="cProfile"></canvas></div></div>
+<div class="card"><div class="chartbox tall"><canvas id="cProfile" role="img" aria-label="Synthetic road sites by congestion and journey time"></canvas></div></div>
 
 <div class="finding">
   Journey times rise steadily with congested share, but <strong>cost rises far
@@ -140,6 +145,7 @@
         ? 'Showing all 74 sites.'
         : 'Showing ' + S.length + ' of 74 sites.';
 
+    document.getElementById('exportCsv').disabled = S.length === 0;
     tb.innerHTML = S.map(s => {
       const b = band(s.jti);
       return '<tr>' +
@@ -204,6 +210,36 @@
       }
     });
   }
+
+  // Export only the visible synthetic-data records, with CSV-formula protection.
+  const csvValue = v => {
+    if (typeof v === 'number') return String(v);
+    let text = String(v ?? '');
+    if (/^[\s]*[=+@-]/.test(text)) text = "'" + text;
+    return '"' + text.replaceAll('"', '""') + '"';
+  };
+  document.getElementById('resetFilters').addEventListener('click', () => {
+    [fCity, fRoad, fSet].forEach(el => { el.value = ''; });
+    q.value = '';
+    render();
+    q.focus();
+  });
+  document.getElementById('exportCsv').addEventListener('click', () => {
+    const records = current();
+    const fields = ['code','road','city','corridor','setting','jti','congested_pct','risk','collisions','cost_m'];
+    const header = ['Site','Road','City','Corridor','Setting','Journey Time Index','Congested hours (%)','Risk score','Simulated collisions','Annualised cost (£m)'];
+    const lines = [header.map(csvValue).join(',')];
+    records.forEach(row => lines.push(fields.map(field => csvValue(row[field])).join(',')));
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'collinalitics-scotland-its-synthetic-filtered.csv';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
 
   [fCity, fRoad, fSet].forEach(el => el.addEventListener('change', render));
   q.addEventListener('input', render);

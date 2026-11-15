@@ -1,0 +1,17 @@
+name: Validate ITS editorial redesign
+on:
+  push:
+    branches: [design/its-editorial-v2]
+  pull_request:
+    branches: [main]
+jobs:
+  static-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check demos/app.js
+      - run: node --check demos/scotland-its/data.js
+      - run: node scripts/validate-demo.mjs

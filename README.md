@@ -6,11 +6,13 @@ award submission demonstrating the full senior data analyst and business analyst
 business case, data architecture, tested transformation pipeline, dimensional model,
 predictive layer, economic valuation and five executive dashboards.
 
-**Framing client:** Transport Scotland - Network Operations and Strategy.
+**Hypothetical stakeholder for this simulated case study:** Transport Scotland - Network Operations and Strategy. This is a demonstration scenario only. Collinalitics has no contract, commission, affiliation or endorsement from Transport Scotland or another public body.
 
 ---
 
 ## Headline result
+
+> **Synthetic demonstration only.** The costs, collisions and traffic measurements below are model outputs from generated data. They do not describe actual conditions, public-sector liabilities or real investment recommendations. See the demonstration's method and limitations.
 
 The monitored network carries an estimated **GBP 1.35 billion per year** of avoidable
 economic cost. Carbon (44%) now exceeds delay (41%) as the largest monetised
